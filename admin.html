@@ -865,6 +865,13 @@ tbody tr.drag-over td:first-child{
       <div class="login-field">
         <input type="password" id="adm-pass" placeholder="Password">
       </div>
+      <div class="login-field" style="margin-top:4px;">
+        <input type="password" id="adm-svckey" placeholder="Service Role Key (stored locally)" autocomplete="new-password"
+               style="font-size:11px;" title="Supabase service_role key — required for password management. Saved in your browser only.">
+      </div>
+      <div style="font-size:10px;color:#aaa;margin:-6px 0 10px;line-height:1.4;">
+        🔒 Service key is saved in your browser only — never sent anywhere or committed to code.
+      </div>
       <button class="login-btn" onclick="adminLogin()">Sign In</button>
     </div>
   </div>
@@ -2511,9 +2518,9 @@ const SUPABASE_URL = 'https://bpjfrdfvvcvxocigqjyl.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJwamZyZGZ2dmN2eG9jaWdxanlsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU2NzAwOTMsImV4cCI6MjA5MTI0NjA5M30.UVIK_l8z1FybbGy08PwBbbg7G6_i8hMMkhoARKUNIp4';
 
 // ─── SERVICE ROLE KEY ───────────────────────────────────────────────────────
-// Get this from: Supabase Dashboard → Project Settings → API → service_role key
-// KEEP THIS PRIVATE — never expose in public/user-facing pages
-const SUPABASE_SERVICE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJwamZyZGZ2dmN2eG9jaWdxanlsIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NTY3MDA5MywiZXhwIjoyMDkxMjQ2MDkzfQ.u1vlmu652DFJH32b2i494N5ngNRmxEafZOqBXjoJBCI';
+// Never hardcode this. It is entered once by the admin and stored in
+// localStorage on their machine only — never committed to source code.
+let SUPABASE_SERVICE_KEY = localStorage.getItem('meritoSvcKey') || '';
 // ───────────────────────────────────────────────────────────────────────────
 
 // ─── EMAILJS CONFIG ─────────────────────────────────────────────────────────
@@ -2599,6 +2606,20 @@ async function adminLogin() {
     console.warn('Supabase auth failed, using local auth:', error.message);
   }
 
+  // Save service key to localStorage if provided; reinit sbAdmin
+  const svcKeyInput = document.getElementById('adm-svckey').value.trim();
+  if (svcKeyInput) {
+    localStorage.setItem('meritoSvcKey', svcKeyInput);
+    SUPABASE_SERVICE_KEY = svcKeyInput;
+  }
+  if (SUPABASE_SERVICE_KEY) {
+    try {
+      sbAdmin = supabase.createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY, {
+        auth: { autoRefreshToken: false, persistSession: false }
+      });
+    } catch(e) { console.warn('sbAdmin init failed:', e); }
+  }
+
   localStorage.setItem('meritoAdminLoggedIn', 'yes');
   document.getElementById('login-screen').style.display = 'none';
   document.getElementById('app').style.display = 'block';
@@ -2610,6 +2631,12 @@ async function adminLogin() {
 document.getElementById('adm-pass').addEventListener('keydown', e => {
   if (e.key === 'Enter') adminLogin();
 });
+
+// Pre-fill service key field if already saved
+(function() {
+  const saved = localStorage.getItem('meritoSvcKey');
+  if (saved) document.getElementById('adm-svckey').value = saved;
+})();
 
 /* ══ NAVIGATION ══ */
 let currentPage = 'dashboard';
@@ -3483,27 +3510,52 @@ async function adminChangeUserPassword() {
     errBox.textContent = 'User data missing. Please reopen this profile.';
     errBox.style.display = 'block'; return;
   }
-  if (SUPABASE_SERVICE_KEY === 'YOUR_SERVICE_ROLE_KEY_HERE') {
-    errBox.textContent = 'Service role key not configured. Add SUPABASE_SERVICE_KEY in admin.html.';
+  if (!SUPABASE_SERVICE_KEY) {
+    errBox.textContent = 'Service role key not set. Log out and log back in, entering the key on the login screen.';
+    errBox.style.display = 'block'; return;
+  }
+
+  // Check sbAdmin is properly initialized
+  if (!sbAdmin || !SUPABASE_SERVICE_KEY) {
+    errBox.textContent = 'Service role key not loaded. Please log out and log in again, entering the service key.';
     errBox.style.display = 'block'; return;
   }
 
   const btn = document.getElementById('btn-ud-change-pass');
   btn.disabled = true; btn.textContent = 'Updating…';
 
-  // 1. Change password via Supabase Admin API
-  const { error } = await sbAdmin.auth.admin.updateUser(userId, { password: pass });
+  try {
+    // Use direct REST API call — more reliable than SDK admin methods from browser
+    const res = await fetch(`${SUPABASE_URL}/auth/v1/admin/users/${userId}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': SUPABASE_SERVICE_KEY,
+        'Authorization': `Bearer ${SUPABASE_SERVICE_KEY}`
+      },
+      body: JSON.stringify({
+        password: pass,
+        user_metadata: { has_password: true }
+      })
+    });
 
-  if (error) {
+    const resData = await res.json();
+    console.log('Password update response:', res.status, resData);
+
+    if (!res.ok) {
+      btn.disabled = false; btn.textContent = '🔑 Update Password & Notify User';
+      errBox.textContent = 'Failed: ' + (resData?.msg || resData?.message || `HTTP ${res.status}`);
+      errBox.style.display = 'block'; return;
+    }
+  } catch(e) {
     btn.disabled = false; btn.textContent = '🔑 Update Password & Notify User';
-    errBox.textContent = 'Failed to update password: ' + error.message;
-    errBox.style.display = 'block'; return;
+    errBox.textContent = 'Network error: ' + (e.message || 'Check console.');
+    errBox.style.display = 'block';
+    console.error('adminChangeUserPassword error:', e);
+    return;
   }
 
-  // 2. Also update has_password flag in user metadata
-  await sbAdmin.auth.admin.updateUser(userId, { user_metadata: { has_password: true } });
-
-  // 3. Send email notification
+  // 2. Send email notification
   let emailSent = false;
   if (EMAILJS_PUBLIC_KEY !== 'YOUR_EMAILJS_PUBLIC_KEY') {
     try {
