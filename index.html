@@ -3135,8 +3135,8 @@ async function loadCourseContent(courseId) {
     .from('course_content')
     .select('*')
     .eq('course_id', courseId)
-    .order('section_order', { ascending: true })
-    .order('item_order', { ascending: true });
+    .order('sort_order', { ascending: true })
+    .order('created_at', { ascending: true });
 
   if (error || !items || items.length === 0) {
     document.getElementById('cp-sidebar-list').innerHTML =
@@ -3167,7 +3167,7 @@ function _renderCPSidebar(items) {
   const sections = {};
   const sectionOrder = [];
   items.forEach(item => {
-    const sec = item.section_title || 'Lessons';
+    const sec = item.section_label || item.section_title || 'Lessons';
     if (!sections[sec]) { sections[sec] = []; sectionOrder.push(sec); }
     sections[sec].push(item);
   });
@@ -3177,12 +3177,14 @@ function _renderCPSidebar(items) {
     html += `<div class="cp-section-head">${sec}</div>`;
     sections[sec].forEach(item => {
       const done = _cpCompleted[item.id] ? true : false;
-      const typeInfo = _cpItemMeta(item.type);
+      const itype = item.content_type || item.type || 'link';
+      const iname = item.content_name || item.title || 'Untitled';
+      const typeInfo = _cpItemMeta(itype);
       html += `
         <div class="cp-item-row" id="cprow-${item.id}" onclick="_playCPById('${item.id}')">
-          <div class="cp-irow-icon t-${item.type}">${typeInfo.icon}</div>
+          <div class="cp-irow-icon t-${itype}">${typeInfo.icon}</div>
           <div class="cp-irow-body">
-            <div class="cp-irow-name">${item.title}</div>
+            <div class="cp-irow-name">${iname}</div>
             <div class="cp-irow-type">${typeInfo.label}</div>
           </div>
           <div class="cp-irow-check ${done ? 'done' : ''}">${done ? '✓' : ''}</div>
@@ -3219,55 +3221,56 @@ function _playCPItem(item) {
   _updateCPProgress();
   if (row) { const chk = row.querySelector('.cp-irow-check'); if (chk) { chk.classList.add('done'); chk.textContent = '✓'; } }
 
+  // Normalise field names (admin uses content_type/content_name, fallback to type/title)
+  const itype = item.content_type || item.type || 'link';
+  const iname = item.content_name || item.title || 'Untitled';
+  const iurl  = item.content_url  || '';
+
   // Show info strip
   const info = document.getElementById('cp-info');
   info.style.display = 'block';
-  document.getElementById('cp-item-title').textContent = item.title || '';
-  const meta = _cpItemMeta(item.type);
+  document.getElementById('cp-item-title').textContent = iname;
+  const meta = _cpItemMeta(itype);
   document.getElementById('cp-item-type').textContent = meta.label;
   document.getElementById('cp-item-desc').textContent  = item.description || '';
 
   // Render viewer
   const viewer = document.getElementById('cp-viewer');
-  if (item.type === 'video') {
-    const url = item.content_url || '';
+  if (itype === 'video') {
     let embedSrc = '';
-    // Support YouTube links
-    const ytMatch = url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/))([A-Za-z0-9_-]{11})/);
+    const ytMatch = iurl.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/))([A-Za-z0-9_-]{11})/);
     if (ytMatch) {
       embedSrc = 'https://www.youtube.com/embed/' + ytMatch[1] + '?autoplay=1&rel=0';
     } else {
-      embedSrc = url; // direct video URL or other embed
+      embedSrc = iurl;
     }
     viewer.innerHTML = embedSrc
       ? `<iframe src="${embedSrc}" allowfullscreen allow="autoplay; encrypted-media" frameborder="0" style="position:absolute;top:0;left:0;width:100%;height:100%;border:none;"></iframe>`
       : `<div class="cp-viewer-inner"><div class="cp-viewer-icon">🎬</div><div class="cp-viewer-label">No video URL</div></div>`;
 
-  } else if (item.type === 'pdf') {
-    const url = item.content_url || '';
-    viewer.innerHTML = url
-      ? `<div class="cp-pdf-wrap" style="position:absolute;top:0;left:0;width:100%;height:100%;"><iframe src="${url}" style="width:100%;height:100%;border:none;"></iframe></div>`
+  } else if (itype === 'pdf') {
+    viewer.innerHTML = iurl
+      ? `<div class="cp-pdf-wrap" style="position:absolute;top:0;left:0;width:100%;height:100%;"><iframe src="${iurl}" style="width:100%;height:100%;border:none;"></iframe></div>`
       : `<div class="cp-viewer-inner"><div class="cp-viewer-icon">📄</div><div class="cp-viewer-label">No PDF URL provided</div></div>`;
 
-  } else if (item.type === 'picture') {
-    const url = item.content_url || '';
-    viewer.innerHTML = url
-      ? `<div class="cp-viewer-inner" style="background:#0a0214;"><img src="${url}" style="max-width:100%;max-height:100%;object-fit:contain;border-radius:8px;" alt="${item.title||''}"></div>`
+  } else if (itype === 'picture') {
+    viewer.innerHTML = iurl
+      ? `<div class="cp-viewer-inner" style="background:#0a0214;"><img src="${iurl}" style="max-width:100%;max-height:100%;object-fit:contain;border-radius:8px;" alt="${iname}"></div>`
       : `<div class="cp-viewer-inner"><div class="cp-viewer-icon">🖼</div><div class="cp-viewer-label">No image URL provided</div></div>`;
 
-  } else if (item.type === 'link') {
-    const url = item.content_url || '';
+  } else if (itype === 'link') {
+    const url = iurl;
     viewer.innerHTML = `
       <div class="cp-viewer-inner">
         <div>
           <div class="cp-viewer-icon">🔗</div>
-          <div class="cp-viewer-label">${item.title || 'External Resource'}</div>
+          <div class="cp-viewer-label">${iname || 'External Resource'}</div>
           <div class="cp-viewer-sub">${item.description || url}</div>
           ${url ? `<a href="${url}" target="_blank" class="cp-viewer-btn">Open Link <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6M15 3h6v6M10 14L21 3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></a>` : ''}
         </div>
       </div>`;
   } else {
-    viewer.innerHTML = `<div class="cp-viewer-inner"><div class="cp-viewer-icon">📌</div><div class="cp-viewer-label">${item.title}</div><div class="cp-viewer-sub">${item.description||''}</div></div>`;
+    viewer.innerHTML = `<div class="cp-viewer-inner"><div class="cp-viewer-icon">📌</div><div class="cp-viewer-label">${iname}</div><div class="cp-viewer-sub">${item.description||''}</div></div>`;
   }
 }
 
