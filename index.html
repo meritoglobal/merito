@@ -2129,10 +2129,11 @@ window.addEventListener('DOMContentLoaded', async () => {
   const { data: { session } } = await sb.auth.getSession();
   if (session) {
     currentUser = session.user;
+    await upsertProfile(currentUser); // ensure profile exists in DB
     updateNavUI(true);
     loadNotifications();
   }
-  loadSiteText(); // load dynamic text (non-blocking)
+  loadSiteText();
   await loadCourses();
   go('home');
 });
@@ -2231,12 +2232,13 @@ function extractYTId(url) {
 }
 
 /* ── Auth state listener ── */
-sb.auth.onAuthStateChange((event, session) => {
-  if (event === 'SIGNED_IN') {
+sb.auth.onAuthStateChange(async (event, session) => {
+  if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
     currentUser = session.user;
+    await upsertProfile(session.user); // sync to profiles table so admin panel sees user
     updateNavUI(true);
     loadNotifications();
-    go('home');
+    if (event === 'SIGNED_IN') go('home');
   } else if (event === 'SIGNED_OUT') {
     currentUser = null;
     activeCart = [];
@@ -2245,6 +2247,21 @@ sb.auth.onAuthStateChange((event, session) => {
     go('home');
   }
 });
+
+/* ── Upsert user into profiles table ── */
+async function upsertProfile(user) {
+  if (!user) return;
+  const meta = user.user_metadata || {};
+  const payload = {
+    id:         user.id,
+    email:      user.email,
+    full_name:  meta.full_name || meta.name || user.email.split('@')[0],
+    phone:      meta.phone || null,
+    avatar_url: meta.avatar_url || meta.picture || null,
+  };
+  const { error } = await sb.from('profiles').upsert(payload, { onConflict: 'id' });
+  if (error) console.warn('Profile upsert failed:', error.message);
+}
 
 /* ══════════════════════════════════════════════
    NOTIFICATION SYSTEM
@@ -2542,9 +2559,10 @@ async function handleRegister() {
   const btn = document.querySelector('#page-register .btn-auth');
   btn.textContent = 'Creating account…'; btn.disabled = true;
 
-  const { error } = await sb.auth.signUp({
+  const fullName = (firstName + ' ' + lastName).trim();
+  const { data: signUpData, error } = await sb.auth.signUp({
     email, password: pass,
-    options: { data: { full_name: firstName + ' ' + lastName, phone } }
+    options: { data: { full_name: fullName, phone } }
   });
 
   btn.textContent = 'Create Account'; btn.disabled = false;
@@ -2554,8 +2572,22 @@ async function handleRegister() {
     errBox.style.display = 'block'; return;
   }
 
-  alert('✅ Account created! Check your email to confirm, then log in.');
-  go('login');
+  // If session is returned immediately (email confirm disabled), upsert profile now
+  if (signUpData?.session) {
+    currentUser = signUpData.session.user;
+    await upsertProfile(currentUser);
+    updateNavUI(true);
+    go('home');
+    return;
+  }
+
+  // Email confirmation required
+  errBox.style.background = 'rgba(0,200,100,0.12)';
+  errBox.style.borderColor = 'rgba(0,200,100,0.3)';
+  errBox.style.color = '#4CAF50';
+  errBox.textContent = '✅ Account created! Check your email to confirm, then log in.';
+  errBox.style.display = 'block';
+  setTimeout(() => go('login'), 3000);
 }
 
 /* ══════════════════════════════════════════════
@@ -2592,15 +2624,20 @@ async function handleLogin() {
    GOOGLE LOGIN
 ══════════════════════════════════════════════ */
 async function handleGoogleLogin() {
+  // Build correct redirect URL — works for GitHub Pages (/merito/) and local file
+  const loc = window.location;
+  let redirectTo;
+  if (loc.protocol === 'file:') {
+    redirectTo = 'http://localhost:3000';
+  } else {
+    // Use the current page URL without hash/query, e.g. https://meritoglobal.github.io/merito/index.html
+    redirectTo = loc.origin + loc.pathname;
+  }
   const { error } = await sb.auth.signInWithOAuth({
     provider: 'google',
-    options: {
-      redirectTo: window.location.origin
-    }
+    options: { redirectTo }
   });
-  if (error) {
-    alert('Google login failed: ' + error.message);
-  }
+  if (error) alert('Google login failed: ' + error.message);
 }
 
 /* ══════════════════════════════════════════════
