@@ -1786,10 +1786,7 @@ footer{
 </div>
 
 <!-- ══════════════════════════════════════════════
-     LOGIN PAGE
-══════════════════════════════════════════════ -->
-<!-- ══════════════════════════════════════════════
-     STEP 1 — EMAIL ENTRY
+     LOGIN PAGE  (email → password OR otp)
 ══════════════════════════════════════════════ -->
 <div id="page-login" class="page">
   <div class="auth-wrap">
@@ -1797,23 +1794,108 @@ footer{
     <div class="auth-logo-wrap">
       <img src="Merito_whitelogo.png" alt="Merito" style="height:72px;width:240px;object-fit:cover;object-position:center 52%;" onerror="this.style.display='none';this.insertAdjacentHTML('afterend','<span style=\'font-size:26px;font-weight:900;color:#fff;\'>Merito</span>')">
     </div>
-    <div class="auth-title">Get Started</div>
-    <div class="auth-sub">Enter your email to continue your learning journey</div>
-    <div class="auth-form">
-      <div id="login-error" style="display:none;background:rgba(255,60,60,0.12);border:1px solid rgba(255,60,60,0.3);border-radius:8px;padding:12px 16px;margin-bottom:14px;font-size:13px;color:#ff6b6b;"></div>
-      <div class="form-group">
-        <label class="form-label">Email Address</label>
-        <input id="login-email" class="form-input" type="email" placeholder="your@email.com"
-               onkeydown="if(event.key==='Enter') handleEmailSubmit()">
+
+    <!-- ── Step A: Email entry ── -->
+    <div id="login-step-email">
+      <div class="auth-title">Welcome</div>
+      <div class="auth-sub">Enter your email to continue</div>
+      <div class="auth-form">
+        <div id="login-error" style="display:none;background:rgba(255,60,60,0.12);border:1px solid rgba(255,60,60,0.3);border-radius:8px;padding:12px 16px;margin-bottom:14px;font-size:13px;color:#ff6b6b;"></div>
+        <div class="form-group">
+          <label class="form-label">Email Address</label>
+          <input id="login-email" class="form-input" type="email" placeholder="your@email.com" autocomplete="new-password"
+                 onkeydown="if(event.key==='Enter') handleEmailSubmit()">
+        </div>
+        <button class="btn-auth" id="btn-email-continue" onclick="handleEmailSubmit()">Continue</button>
+        <div class="auth-divider">or</div>
+        <button class="btn-google" onclick="handleGoogleLogin()">
+          <svg width="18" height="18" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+          Continue with Google
+        </button>
+        <div style="text-align:center;margin-top:16px;"><a style="font-size:13px;color:var(--text-dim);cursor:pointer;" onclick="go('home')">← Back to Home</a></div>
       </div>
-      <button class="btn-auth" onclick="handleEmailSubmit()">Continue</button>
-      <div class="auth-divider">or</div>
-      <button class="btn-google" onclick="handleGoogleLogin()">
-        <svg width="18" height="18" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
-        Continue with Google
-      </button>
-      <div style="text-align:center;margin-top:16px;"><a style="font-size:13px;color:var(--text-dim);cursor:pointer;" onclick="go('home')">← Back to Home</a></div>
     </div>
+
+    <!-- ── Step B: Password entry (existing user) ── -->
+    <div id="login-step-pass" style="display:none;">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
+        <button onclick="_loginBackToEmail()" style="background:none;border:none;color:var(--text-dim);cursor:pointer;padding:0;font-size:20px;line-height:1;">←</button>
+        <div class="auth-title" style="margin-bottom:0;">Enter Password</div>
+      </div>
+      <div class="auth-sub">Signing in as <strong id="login-email-display" style="color:var(--text-acc);"></strong></div>
+      <div class="auth-form">
+        <div id="login-pass-error" style="display:none;background:rgba(255,60,60,0.12);border:1px solid rgba(255,60,60,0.3);border-radius:8px;padding:12px 16px;margin-bottom:14px;font-size:13px;color:#ff6b6b;"></div>
+        <div class="form-group">
+          <label class="form-label">Password</label>
+          <div style="position:relative;">
+            <input id="login-pass" class="form-input" type="password" placeholder="Your password" autocomplete="current-password"
+                   style="padding-right:44px;"
+                   onkeydown="if(event.key==='Enter') handlePasswordLogin()">
+            <button type="button" onclick="togglePwVis('login-pass','eye-lp')" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--text-dim);cursor:pointer;font-size:16px;" id="eye-lp">👁</button>
+          </div>
+        </div>
+        <button class="btn-auth" id="btn-password-login" onclick="handlePasswordLogin()">Sign In</button>
+        <div style="text-align:center;margin-top:14px;">
+          <a style="font-size:13px;color:var(--text-acc);cursor:pointer;font-weight:600;" onclick="handleForgotPassword()">Forgot password?</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Step C: Forgot password — OTP sent, enter code ── -->
+    <div id="login-step-fp-otp" style="display:none;">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
+        <button onclick="_showLoginStep('pass')" style="background:none;border:none;color:var(--text-dim);cursor:pointer;padding:0;font-size:20px;line-height:1;">←</button>
+        <div class="auth-title" style="margin-bottom:0;">Check Your Email</div>
+      </div>
+      <div class="auth-sub">We sent a 6-digit code to <strong id="fp-email-display" style="color:var(--text-acc);"></strong></div>
+      <div class="auth-form" style="max-width:380px;">
+        <div id="fp-otp-error" style="display:none;background:rgba(255,60,60,0.12);border:1px solid rgba(255,60,60,0.3);border-radius:8px;padding:12px 16px;margin-bottom:14px;font-size:13px;color:#ff6b6b;"></div>
+        <div class="otp-row" id="fp-otp-row">
+          <input class="otp-input" maxlength="1" type="text" inputmode="numeric" pattern="[0-9]">
+          <input class="otp-input" maxlength="1" type="text" inputmode="numeric" pattern="[0-9]">
+          <input class="otp-input" maxlength="1" type="text" inputmode="numeric" pattern="[0-9]">
+          <input class="otp-input" maxlength="1" type="text" inputmode="numeric" pattern="[0-9]">
+          <input class="otp-input" maxlength="1" type="text" inputmode="numeric" pattern="[0-9]">
+          <input class="otp-input" maxlength="1" type="text" inputmode="numeric" pattern="[0-9]">
+        </div>
+        <button class="btn-auth" id="btn-fp-verify" onclick="handleFPVerifyOTP()">Verify Code</button>
+        <div style="text-align:center;margin-top:16px;font-size:13px;color:var(--text-dim);">
+          Didn't receive?
+          <a id="fp-resend-link" style="color:var(--text-acc);cursor:pointer;font-weight:700;pointer-events:none;opacity:.5;" onclick="handleForgotPassword(true)">Resend</a>
+          <span id="fp-otp-timer" style="color:var(--text-dim);margin-left:4px;"></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Step D: Set new password (or skip) ── -->
+    <div id="login-step-fp-newpass" style="display:none;">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
+        <div class="auth-title" style="margin-bottom:0;">Reset Password</div>
+      </div>
+      <div class="auth-sub">You're verified! Set a new password or skip to continue.</div>
+      <div class="auth-form">
+        <div id="fp-newpass-error" style="display:none;background:rgba(255,60,60,0.12);border:1px solid rgba(255,60,60,0.3);border-radius:8px;padding:12px 16px;margin-bottom:14px;font-size:13px;color:#ff6b6b;"></div>
+        <div class="form-group">
+          <label class="form-label">New Password</label>
+          <div style="position:relative;">
+            <input id="fp-new-pass" class="form-input" type="password" placeholder="4–16 characters" style="padding-right:44px;" maxlength="16"
+                   onkeydown="if(event.key==='Enter') document.getElementById('fp-new-pass2').focus()">
+            <button type="button" onclick="togglePwVis('fp-new-pass','eye-fp1')" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--text-dim);cursor:pointer;font-size:16px;" id="eye-fp1">👁</button>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Confirm New Password</label>
+          <div style="position:relative;">
+            <input id="fp-new-pass2" class="form-input" type="password" placeholder="Repeat password" style="padding-right:44px;" maxlength="16"
+                   onkeydown="if(event.key==='Enter') handleFPSetPassword()">
+            <button type="button" onclick="togglePwVis('fp-new-pass2','eye-fp2')" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--text-dim);cursor:pointer;font-size:16px;" id="eye-fp2">👁</button>
+          </div>
+        </div>
+        <button class="btn-auth" onclick="handleFPSetPassword()">Set New Password</button>
+        <button class="btn-auth" onclick="handleFPSkip()" style="background:transparent;border:1px solid rgba(255,255,255,0.2);margin-top:8px;color:var(--text-dim);">Continue Without Changing</button>
+      </div>
+    </div>
+
   </div>
 </div>
 
@@ -1885,7 +1967,7 @@ footer{
       <div class="form-group">
         <label class="form-label">Set Password</label>
         <div style="position:relative;">
-          <input id="reg-pass" class="form-input" type="password" placeholder="Minimum 8 characters"
+          <input id="reg-pass" class="form-input" type="password" placeholder="4–16 characters" maxlength="16"
                  style="padding-right:44px;"
                  onkeydown="if(event.key==='Enter') document.getElementById('reg-pass2').focus()">
           <button type="button" onclick="togglePwVis('reg-pass','eye1')" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--text-dim);cursor:pointer;padding:0;font-size:16px;" id="eye1">👁</button>
@@ -1895,7 +1977,7 @@ footer{
         <label class="form-label">Confirm Password</label>
         <div style="position:relative;">
           <input id="reg-pass2" class="form-input" type="password" placeholder="Repeat your password"
-                 style="padding-right:44px;"
+                 style="padding-right:44px;" maxlength="16"
                  onkeydown="if(event.key==='Enter') handleProfileSetup()">
           <button type="button" onclick="togglePwVis('reg-pass2','eye2')" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--text-dim);cursor:pointer;padding:0;font-size:16px;" id="eye2">👁</button>
         </div>
@@ -2749,12 +2831,14 @@ function renderAllCourseGrids() {
 }
 
 /* ══════════════════════════════════════════════
-   AUTH FLOW — 3-STEP: EMAIL → OTP → PROFILE
+   AUTH FLOW
+   Existing user : email → password → home
+   New user      : email → OTP → profile setup
 ══════════════════════════════════════════════ */
-let _authEmail    = '';
-let _otpTimerRef  = null;
+let _authEmail   = '';
+let _otpTimerRef = null;
 
-// ── Step 1: Email submit ──
+// ── Step 1: Email submit — check if existing or new user ──
 async function handleEmailSubmit() {
   const email  = document.getElementById('login-email').value.trim().toLowerCase();
   const errBox = document.getElementById('login-error');
@@ -2765,29 +2849,68 @@ async function handleEmailSubmit() {
     errBox.style.display = 'block'; return;
   }
 
-  const btn = document.querySelector('#page-login .btn-auth');
-  btn.textContent = 'Sending code…'; btn.disabled = true;
+  const btn = document.getElementById('btn-email-continue');
+  btn.textContent = 'Checking…'; btn.disabled = true;
 
-  const { error } = await sb.auth.signInWithOtp({
-    email,
-    options: { shouldCreateUser: true }
-  });
+  // Check if email already exists in profiles
+  const { data: profile } = await sb.from('profiles').select('id').eq('email', email).maybeSingle();
 
   btn.textContent = 'Continue'; btn.disabled = false;
+  _authEmail = email;
 
-  if (error) {
-    errBox.textContent = error.message || 'Failed to send code. Try again.';
+  if (profile) {
+    // Existing user → show password step
+    document.getElementById('login-email-display').textContent = email;
+    document.getElementById('login-step-email').style.display = 'none';
+    document.getElementById('login-step-pass').style.display  = 'block';
+    document.getElementById('login-pass-error').style.display = 'none';
+    document.getElementById('login-pass').value = '';
+    setTimeout(() => document.getElementById('login-pass').focus(), 100);
+  } else {
+    // New user → send OTP
+    const { error } = await sb.auth.signInWithOtp({ email, options: { shouldCreateUser: true } });
+    if (error) {
+      errBox.textContent = error.message || 'Failed to send code. Try again.';
+      errBox.style.display = 'block'; return;
+    }
+    document.getElementById('verify-email-display').textContent = email;
+    document.querySelectorAll('#otp-row .otp-input').forEach(i => i.value = '');
+    document.getElementById('verify-error').style.display = 'none';
+    go('verify');
+    _startOTPTimer(120);
+    setTimeout(() => { const f = document.querySelector('#otp-row .otp-input'); if(f) f.focus(); }, 200);
+  }
+}
+
+function _loginBackToEmail() {
+  document.getElementById('login-step-pass').style.display  = 'none';
+  document.getElementById('login-step-email').style.display = 'block';
+  document.getElementById('login-pass').value = '';
+}
+
+// ── Password login (existing users) ──
+async function handlePasswordLogin() {
+  const pass   = document.getElementById('login-pass').value;
+  const errBox = document.getElementById('login-pass-error');
+  errBox.style.display = 'none';
+
+  if (!pass) {
+    errBox.textContent = 'Please enter your password.';
     errBox.style.display = 'block'; return;
   }
 
-  _authEmail = email;
-  document.getElementById('verify-email-display').textContent = email;
-  // clear OTP boxes
-  document.querySelectorAll('#otp-row .otp-input').forEach(i => i.value = '');
-  document.getElementById('verify-error').style.display = 'none';
-  go('verify');
-  _startOTPTimer(120);
-  setTimeout(() => { const first = document.querySelector('#otp-row .otp-input'); if(first) first.focus(); }, 200);
+  const btn = document.getElementById('btn-password-login');
+  btn.textContent = 'Signing in…'; btn.disabled = true;
+
+  const { error } = await sb.auth.signInWithPassword({ email: _authEmail, password: pass });
+
+  btn.textContent = 'Sign In'; btn.disabled = false;
+
+  if (error) {
+    errBox.textContent = 'Wrong password. Please try again.';
+    errBox.style.display = 'block'; return;
+  }
+  // onAuthStateChange SIGNED_IN will handle the redirect
 }
 
 // ── Step 2: OTP Verify ──
@@ -2852,8 +2975,12 @@ async function handleProfileSetup() {
     errBox.textContent = 'Phone number is required.';
     errBox.style.display = 'block'; return;
   }
-  if (!pass || pass.length < 8) {
-    errBox.textContent = 'Password must be at least 8 characters.';
+  if (!pass || pass.length < 4) {
+    errBox.textContent = 'Password must be at least 4 characters.';
+    errBox.style.display = 'block'; return;
+  }
+  if (pass.length > 16) {
+    errBox.textContent = 'Password cannot exceed 16 characters.';
     errBox.style.display = 'block'; return;
   }
   if (pass !== pass2) {
@@ -2933,6 +3060,168 @@ function togglePwVis(inputId, btnId) {
   const btn = document.getElementById(btnId);
   if (inp.type === 'password') { inp.type = 'text'; btn.textContent = '🙈'; }
   else { inp.type = 'password'; btn.textContent = '👁'; }
+}
+
+// ── Login step visibility helper ──
+function _showLoginStep(step) {
+  const steps = ['email','pass','fp-otp','fp-newpass'];
+  steps.forEach(s => {
+    const el = document.getElementById('login-step-' + s);
+    if (el) el.style.display = (s === step) ? 'block' : 'none';
+  });
+}
+
+// ── Forgot Password: Step C — send OTP ──
+let _fpTimerRef = null;
+async function handleForgotPassword(isResend) {
+  if (!_authEmail) {
+    // If called from outside password step, grab email from input
+    _authEmail = document.getElementById('login-email')?.value?.trim().toLowerCase() || '';
+  }
+  if (!_authEmail) {
+    toast('Please enter your email first.', 'error'); return;
+  }
+
+  if (!isResend) {
+    // Show Step C
+    _showLoginStep('fp-otp');
+    const disp = document.getElementById('fp-email-display');
+    if (disp) disp.textContent = _authEmail;
+    document.querySelectorAll('#fp-otp-row .otp-input').forEach(i => i.value = '');
+    document.getElementById('fp-otp-error').style.display = 'none';
+    setTimeout(() => { const f = document.querySelector('#fp-otp-row .otp-input'); if(f) f.focus(); }, 200);
+  }
+
+  const { error } = await sb.auth.signInWithOtp({ email: _authEmail, options: { shouldCreateUser: false } });
+  if (error) {
+    const errBox = document.getElementById('fp-otp-error');
+    errBox.textContent = error.message || 'Failed to send code. Try again.';
+    errBox.style.display = 'block'; return;
+  }
+
+  _startFPTimer(120);
+  if (isResend) toast('Code resent!', 'success');
+}
+
+// ── Forgot Password: Step C — verify OTP ──
+async function handleFPVerifyOTP() {
+  const inputs = document.querySelectorAll('#fp-otp-row .otp-input');
+  const token  = Array.from(inputs).map(i => i.value.trim()).join('');
+  const errBox = document.getElementById('fp-otp-error');
+  errBox.style.display = 'none';
+
+  if (token.length < 6) {
+    errBox.textContent = 'Enter the 6-digit code sent to your email.';
+    errBox.style.display = 'block'; return;
+  }
+
+  const btn = document.getElementById('btn-fp-verify');
+  btn.textContent = 'Verifying…'; btn.disabled = true;
+
+  const { data, error } = await sb.auth.verifyOtp({
+    email: _authEmail,
+    token,
+    type: 'email'
+  });
+
+  btn.textContent = 'Verify Code'; btn.disabled = false;
+
+  if (error) {
+    errBox.textContent = error.message || 'Invalid or expired code. Try again.';
+    errBox.style.display = 'block'; return;
+  }
+
+  // OTP verified — user is now logged in
+  if (_fpTimerRef) clearInterval(_fpTimerRef);
+  currentUser = data.user;
+  await upsertProfile(currentUser);
+  updateNavUI(true);
+
+  // Show Step D (set new password)
+  _showLoginStep('fp-newpass');
+  document.getElementById('fp-new-pass').value  = '';
+  document.getElementById('fp-new-pass2').value = '';
+  document.getElementById('fp-newpass-error').style.display = 'none';
+  setTimeout(() => document.getElementById('fp-new-pass').focus(), 150);
+}
+
+// ── Forgot Password: Step D — set new password ──
+async function handleFPSetPassword() {
+  const pass   = document.getElementById('fp-new-pass').value;
+  const pass2  = document.getElementById('fp-new-pass2').value;
+  const errBox = document.getElementById('fp-newpass-error');
+  errBox.style.display = 'none';
+
+  if (!pass || pass.length < 4) {
+    errBox.textContent = 'Password must be at least 4 characters.';
+    errBox.style.display = 'block'; return;
+  }
+  if (pass.length > 16) {
+    errBox.textContent = 'Password cannot exceed 16 characters.';
+    errBox.style.display = 'block'; return;
+  }
+  if (pass !== pass2) {
+    errBox.textContent = 'Passwords do not match.';
+    errBox.style.display = 'block'; return;
+  }
+
+  const btn = document.querySelector('#login-step-fp-newpass .btn-auth:first-of-type');
+  if (btn) { btn.textContent = 'Saving…'; btn.disabled = true; }
+
+  const { error } = await sb.auth.updateUser({ password: pass, data: { has_password: true } });
+  if (btn) { btn.textContent = 'Set New Password'; btn.disabled = false; }
+
+  if (error) {
+    errBox.textContent = error.message || 'Failed to update password. Try again.';
+    errBox.style.display = 'block'; return;
+  }
+
+  // Update profile completeness
+  if (currentUser) {
+    const { data: profile } = await sb.from('profiles').select('full_name,phone').eq('id', currentUser.id).single();
+    if (!profile?.full_name || !profile?.phone) {
+      showProfileSetup(currentUser); return;
+    }
+  }
+  go('home');
+  toast('Password updated! Welcome back.', 'success');
+}
+
+// ── Forgot Password: Step D — skip password change ──
+function handleFPSkip() {
+  if (currentUser) {
+    checkProfileComplete(currentUser).then(complete => {
+      if (!complete) { showProfileSetup(currentUser); }
+      else { go('home'); toast('Welcome back!', 'success'); }
+    });
+  } else {
+    go('home');
+  }
+}
+
+// ── FP timer (separate from main OTP timer) ──
+function _startFPTimer(secs) {
+  if (_fpTimerRef) clearInterval(_fpTimerRef);
+  const timerEl  = document.getElementById('fp-otp-timer');
+  const resendEl = document.getElementById('fp-resend-link');
+  resendEl.style.pointerEvents = 'none';
+  resendEl.style.opacity = '.5';
+
+  let remaining = secs;
+  const tick = () => {
+    const m = String(Math.floor(remaining / 60)).padStart(2,'0');
+    const s = String(remaining % 60).padStart(2,'0');
+    timerEl.textContent = `(${m}:${s})`;
+    if (remaining <= 0) {
+      clearInterval(_fpTimerRef);
+      timerEl.textContent = '';
+      resendEl.style.pointerEvents = 'auto';
+      resendEl.style.opacity = '1';
+    }
+    remaining--;
+  };
+  tick();
+  _fpTimerRef = setInterval(tick, 1000);
 }
 
 /* ══════════════════════════════════════════════
@@ -3402,6 +3691,13 @@ function go(page) {
   if (page === 'profile') loadProfileData();
   if (page === 'order-track') loadOrderHistory();
   if (page === 'cart') renderCart();
+  if (page === 'login') {
+    // Always reset to email step
+    document.getElementById('login-step-email').style.display = 'block';
+    document.getElementById('login-step-pass').style.display  = 'none';
+    document.getElementById('login-error').style.display      = 'none';
+    document.getElementById('login-email').value = '';
+  }
   // Hide nav for course-player (full-screen experience)
   if (page === 'course-player') {
     document.getElementById('main-nav').style.display = 'none';
@@ -3827,27 +4123,31 @@ function toast(msg, type) {
   el._t = setTimeout(() => { el.style.opacity = '0'; el.style.transform = 'translateX(-50%) translateY(20px)'; }, 2800);
 }
 
-document.querySelectorAll('.otp-input').forEach((inp, i, arr) => {
-  inp.addEventListener('input', () => {
-    inp.value = inp.value.replace(/\D/g,'').slice(0,1);
-    if (inp.value && i < arr.length - 1) arr[i+1].focus();
-    // auto-submit when all filled
-    const full = Array.from(arr).every(x => x.value.length === 1);
-    if (full) handleVerifyOTP();
+function _setupOtpRow(rowId, onComplete) {
+  const arr = Array.from(document.querySelectorAll('#' + rowId + ' .otp-input'));
+  arr.forEach((inp, i) => {
+    inp.addEventListener('input', () => {
+      inp.value = inp.value.replace(/\D/g,'').slice(0,1);
+      if (inp.value && i < arr.length - 1) arr[i+1].focus();
+      const full = arr.every(x => x.value.length === 1);
+      if (full) onComplete();
+    });
+    inp.addEventListener('keydown', e => {
+      if (e.key === 'Backspace' && !inp.value && i > 0) arr[i-1].focus();
+    });
+    inp.addEventListener('paste', e => {
+      e.preventDefault();
+      const paste = (e.clipboardData || window.clipboardData).getData('text').replace(/\D/g,'');
+      arr.forEach((box, j) => { box.value = paste[j] || ''; });
+      const last = Math.min(paste.length, arr.length) - 1;
+      if (last >= 0) arr[last].focus();
+      const full = arr.every(x => x.value.length === 1);
+      if (full) onComplete();
+    });
   });
-  inp.addEventListener('keydown', e => {
-    if (e.key === 'Backspace' && !inp.value && i > 0) arr[i-1].focus();
-  });
-  inp.addEventListener('paste', e => {
-    e.preventDefault();
-    const paste = (e.clipboardData || window.clipboardData).getData('text').replace(/\D/g,'');
-    arr.forEach((box, j) => { box.value = paste[j] || ''; });
-    const last = Math.min(paste.length, arr.length) - 1;
-    if (last >= 0) arr[last].focus();
-    const full = Array.from(arr).every(x => x.value.length === 1);
-    if (full) handleVerifyOTP();
-  });
-});
+}
+_setupOtpRow('otp-row', handleVerifyOTP);
+_setupOtpRow('fp-otp-row', handleFPVerifyOTP);
 </script>
 </body>
 </html>
