@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>MeritoBD Admin Panel</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
@@ -2164,6 +2165,37 @@ tbody tr.drag-over td:first-child{
         <span>Joined: <strong id="ud-joined">—</strong></span>
         <span>User ID: <strong id="ud-uid" style="font-family:monospace;font-size:10px;">—</strong></span>
       </div>
+
+      <!-- Change Password -->
+      <div style="border-top:1px solid var(--border);margin-top:18px;padding-top:16px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none;" onclick="toggleUDPassSection()">
+          <div style="font-size:13px;font-weight:700;color:var(--text);">🔑 Change User Password</div>
+          <span id="ud-pass-toggle-icon" style="font-size:13px;color:var(--text-dim);">▼ Show</span>
+        </div>
+        <div id="ud-pass-section" style="display:none;margin-top:14px;">
+          <div id="ud-pass-error" style="display:none;background:#fdecea;border:1px solid #f5c6cb;border-radius:6px;padding:10px 14px;margin-bottom:12px;font-size:12px;color:#c62828;"></div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+            <div class="form-group" style="margin:0;">
+              <label class="form-label">New Password</label>
+              <div style="position:relative;">
+                <input class="form-input" id="ud-new-pass" type="password" placeholder="4–16 characters" maxlength="16" style="padding-right:38px;" autocomplete="new-password">
+                <button type="button" onclick="toggleUDPassVis('ud-new-pass','eye-ud1')" id="eye-ud1" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:14px;color:var(--text-dim);">👁</button>
+              </div>
+            </div>
+            <div class="form-group" style="margin:0;">
+              <label class="form-label">Confirm Password</label>
+              <div style="position:relative;">
+                <input class="form-input" id="ud-new-pass2" type="password" placeholder="Repeat password" maxlength="16" style="padding-right:38px;" autocomplete="new-password">
+                <button type="button" onclick="toggleUDPassVis('ud-new-pass2','eye-ud2')" id="eye-ud2" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:14px;color:var(--text-dim);">👁</button>
+              </div>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;">
+            <button class="btn-primary" id="btn-ud-change-pass" onclick="adminChangeUserPassword()" style="padding:9px 20px;font-size:13px;">🔑 Update Password &amp; Notify User</button>
+            <span id="ud-pass-success" style="display:none;font-size:12px;color:var(--green);font-weight:600;">✓ Password updated &amp; email sent!</span>
+          </div>
+        </div>
+      </div>
     </div>
     <div class="modal-footer">
       <button class="btn-secondary" onclick="closeModal('modal-user-detail')">Cancel</button>
@@ -2477,11 +2509,36 @@ const ADMIN_PASS  = 'asdqwe12';
 ══════════════════════════════════════════ */
 const SUPABASE_URL = 'https://bpjfrdfvvcvxocigqjyl.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJwamZyZGZ2dmN2eG9jaWdxanlsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU2NzAwOTMsImV4cCI6MjA5MTI0NjA5M30.UVIK_l8z1FybbGy08PwBbbg7G6_i8hMMkhoARKUNIp4';
-let sb;
+
+// ─── SERVICE ROLE KEY ───────────────────────────────────────────────────────
+// Get this from: Supabase Dashboard → Project Settings → API → service_role key
+// KEEP THIS PRIVATE — never expose in public/user-facing pages
+const SUPABASE_SERVICE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJwamZyZGZ2dmN2eG9jaWdxanlsIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NTY3MDA5MywiZXhwIjoyMDkxMjQ2MDkzfQ.u1vlmu652DFJH32b2i494N5ngNRmxEafZOqBXjoJBCI';
+// ───────────────────────────────────────────────────────────────────────────
+
+// ─── EMAILJS CONFIG ─────────────────────────────────────────────────────────
+// Sign up free at https://www.emailjs.com/ then:
+// 1. Create a service (Gmail/SMTP) and note the Service ID
+// 2. Create a template with variables: {{to_email}}, {{to_name}}, {{new_password}}
+//    Subject: "Your Merito password has been updated"
+//    Body: "Hi {{to_name}},\n\nYour Merito account password was updated by an admin.\nNew password: {{new_password}}\n\nPlease log in and change it. — Merito Team"
+// 3. Copy your Public Key from Account → General
+const EMAILJS_PUBLIC_KEY  = 'gvhuPslh3hgNSALYv';
+const EMAILJS_SERVICE_ID  = 'service_x34gzab';
+const EMAILJS_TEMPLATE_ID = 'template_j719rck';
+// ───────────────────────────────────────────────────────────────────────────
+
+let sb, sbAdmin;
 try {
-  sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+  sb      = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+  sbAdmin = supabase.createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY, {
+    auth: { autoRefreshToken: false, persistSession: false }
+  });
+  if (EMAILJS_PUBLIC_KEY !== 'YOUR_EMAILJS_PUBLIC_KEY') {
+    emailjs.init({ publicKey: EMAILJS_PUBLIC_KEY });
+  }
 } catch(e) {
-  console.error('Supabase failed to initialize:', e);
+  console.error('Supabase/EmailJS failed to initialize:', e);
 }
 
 async function adminLogout() {
@@ -3284,6 +3341,14 @@ async function openUserDetail(userId) {
   addSel.innerHTML = '<option value="">— Select course to enroll —</option>' +
     allCourses.map(c => `<option value="${c.id}">${c.title}</option>`).join('');
 
+  // Reset password section to collapsed
+  document.getElementById('ud-pass-section').style.display = 'none';
+  document.getElementById('ud-pass-toggle-icon').textContent = '▼ Show';
+  document.getElementById('ud-new-pass').value  = '';
+  document.getElementById('ud-new-pass2').value = '';
+  document.getElementById('ud-pass-error').style.display   = 'none';
+  document.getElementById('ud-pass-success').style.display = 'none';
+
   openModal('modal-user-detail');
 
   // Load enrollments async
@@ -3366,6 +3431,107 @@ async function saveUserProfile() {
   closeModal('modal-user-detail');
   applyUserFilter();
   toast('Profile updated!','success');
+}
+
+// ── Change Password section toggle ──
+function toggleUDPassSection() {
+  const section = document.getElementById('ud-pass-section');
+  const icon    = document.getElementById('ud-pass-toggle-icon');
+  if (section.style.display === 'none') {
+    section.style.display = 'block'; icon.textContent = '▲ Hide';
+    document.getElementById('ud-new-pass').value  = '';
+    document.getElementById('ud-new-pass2').value = '';
+    document.getElementById('ud-pass-error').style.display   = 'none';
+    document.getElementById('ud-pass-success').style.display = 'none';
+  } else {
+    section.style.display = 'none'; icon.textContent = '▼ Show';
+  }
+}
+
+function toggleUDPassVis(inputId, btnId) {
+  const inp = document.getElementById(inputId);
+  const btn = document.getElementById(btnId);
+  if (inp.type === 'password') { inp.type = 'text'; btn.textContent = '🙈'; }
+  else { inp.type = 'password'; btn.textContent = '👁'; }
+}
+
+// ── Admin change user password + email notification ──
+async function adminChangeUserPassword() {
+  const userId   = document.getElementById('ud-id').value;
+  const userEmail= document.getElementById('ud-user-email').value;
+  const userName = document.getElementById('ud-name').value.trim() || 'User';
+  const pass     = document.getElementById('ud-new-pass').value;
+  const pass2    = document.getElementById('ud-new-pass2').value;
+  const errBox   = document.getElementById('ud-pass-error');
+  const successEl= document.getElementById('ud-pass-success');
+  errBox.style.display = 'none'; successEl.style.display = 'none';
+
+  // Validate
+  if (!pass || pass.length < 4) {
+    errBox.textContent = 'Password must be at least 4 characters.';
+    errBox.style.display = 'block'; return;
+  }
+  if (pass.length > 16) {
+    errBox.textContent = 'Password cannot exceed 16 characters.';
+    errBox.style.display = 'block'; return;
+  }
+  if (pass !== pass2) {
+    errBox.textContent = 'Passwords do not match.';
+    errBox.style.display = 'block'; return;
+  }
+  if (!userId || !userEmail) {
+    errBox.textContent = 'User data missing. Please reopen this profile.';
+    errBox.style.display = 'block'; return;
+  }
+  if (SUPABASE_SERVICE_KEY === 'YOUR_SERVICE_ROLE_KEY_HERE') {
+    errBox.textContent = 'Service role key not configured. Add SUPABASE_SERVICE_KEY in admin.html.';
+    errBox.style.display = 'block'; return;
+  }
+
+  const btn = document.getElementById('btn-ud-change-pass');
+  btn.disabled = true; btn.textContent = 'Updating…';
+
+  // 1. Change password via Supabase Admin API
+  const { error } = await sbAdmin.auth.admin.updateUser(userId, { password: pass });
+
+  if (error) {
+    btn.disabled = false; btn.textContent = '🔑 Update Password & Notify User';
+    errBox.textContent = 'Failed to update password: ' + error.message;
+    errBox.style.display = 'block'; return;
+  }
+
+  // 2. Also update has_password flag in user metadata
+  await sbAdmin.auth.admin.updateUser(userId, { user_metadata: { has_password: true } });
+
+  // 3. Send email notification
+  let emailSent = false;
+  if (EMAILJS_PUBLIC_KEY !== 'YOUR_EMAILJS_PUBLIC_KEY') {
+    try {
+      await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
+        to_email:     userEmail,
+        to_name:      userName,
+        new_password: pass
+      });
+      emailSent = true;
+    } catch(e) {
+      console.warn('EmailJS send failed:', e);
+    }
+  }
+
+  btn.disabled = false; btn.textContent = '🔑 Update Password & Notify User';
+  document.getElementById('ud-new-pass').value  = '';
+  document.getElementById('ud-new-pass2').value = '';
+
+  if (emailSent) {
+    successEl.textContent = '✓ Password updated & email sent to ' + userEmail;
+    successEl.style.display = 'block';
+  } else {
+    // EmailJS not configured — show the password in a visible alert so admin can relay it
+    successEl.textContent = '✓ Password updated! (Email not configured — new password: ' + pass + ')';
+    successEl.style.display = 'block';
+    successEl.style.color = '#E65100';
+  }
+  toast('Password changed for ' + userName, 'success');
 }
 
 async function udAddCourse() {
