@@ -2103,6 +2103,7 @@ tbody tr.drag-over td:first-child{
     </div>
     <div class="modal-body" style="padding:20px 24px;">
       <input type="hidden" id="ud-id">
+      <input type="hidden" id="ud-user-email">
 
       <!-- Profile photo + basic info row -->
       <div style="display:flex;gap:20px;margin-bottom:20px;align-items:flex-start;">
@@ -3251,6 +3252,7 @@ async function openUserDetail(userId) {
 
   // Fill fields
   document.getElementById('ud-id').value          = u.id;
+  document.getElementById('ud-user-email').value  = u.email||'';
   document.getElementById('ud-name').value        = u.full_name||'';
   document.getElementById('ud-phone').value       = u.phone||'';
   document.getElementById('ud-email').value       = u.email||'';
@@ -3274,7 +3276,8 @@ async function openUserDetail(userId) {
   document.getElementById('ud-enrolled-list').innerHTML = '<div style="padding:14px;text-align:center;font-size:12px;color:var(--text-dim);">Loading…</div>';
   document.getElementById('ud-enr-badge').textContent = '…';
 
-  const { data: enrs } = await sb.from('course_enrollments').select('*').eq('user_id', userId);
+  const userEmail = document.getElementById('ud-user-email').value;
+  const { data: enrs } = await sb.from('course_enrollments').select('*').eq('user_email', userEmail);
   _udEnrollments = enrs || [];
   renderUDEnrollments();
 }
@@ -3342,15 +3345,16 @@ async function saveUserProfile() {
 }
 
 async function udAddCourse() {
-  const userId   = document.getElementById('ud-id').value;
-  const courseId = parseInt(document.getElementById('ud-add-course').value);
-  if (!courseId) { toast('Select a course first','error'); return; }
+  const userEmail = document.getElementById('ud-user-email').value;
+  const courseId  = parseInt(document.getElementById('ud-add-course').value);
+  if (!userEmail) { toast('No email found for this user','error'); return; }
+  if (!courseId)  { toast('Select a course first','error'); return; }
   if (_udEnrollments.find(e => e.course_id == courseId)) { toast('Already enrolled in this course','error'); return; }
 
-  const { error } = await sb.from('course_enrollments').insert({ user_id: userId, course_id: courseId });
+  const { error } = await sb.from('course_enrollments').insert({ user_email: userEmail, course_id: courseId });
   if (error) { toast('Error: '+error.message,'error'); return; }
 
-  const { data: enrs } = await sb.from('course_enrollments').select('*').eq('user_id', userId);
+  const { data: enrs } = await sb.from('course_enrollments').select('*').eq('user_email', userEmail);
   _udEnrollments = enrs || [];
   renderUDEnrollments();
   document.getElementById('ud-add-course').value = '';
@@ -3358,11 +3362,11 @@ async function udAddCourse() {
 }
 
 async function udRemoveCourse(courseId) {
-  const userId = document.getElementById('ud-id').value;
-  const course = allCourses.find(c => c.id == courseId);
+  const userEmail = document.getElementById('ud-user-email').value;
+  const course    = allCourses.find(c => c.id == courseId);
   if (!confirm(`Remove this user from "${course?.title||'this course'}"?`)) return;
 
-  await sb.from('course_enrollments').delete().eq('user_id', userId).eq('course_id', courseId);
+  await sb.from('course_enrollments').delete().eq('user_email', userEmail).eq('course_id', courseId);
   _udEnrollments = _udEnrollments.filter(e => e.course_id != courseId);
   renderUDEnrollments();
   toast('Removed from course','');

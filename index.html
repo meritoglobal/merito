@@ -1342,6 +1342,135 @@ footer{
 @keyframes fadeUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
 .reveal{opacity:0;transform:translateY(24px);transition:opacity .55s ease,transform .55s ease;}
 .reveal.on{opacity:1;transform:translateY(0);}
+
+/* ══ COURSE PLAYER PAGE ══ */
+#page-course-player{background:var(--bg);}
+.cp-topbar{
+  height:56px;background:rgba(20,4,40,0.95);backdrop-filter:blur(10px);
+  border-bottom:1px solid rgba(74,0,177,0.25);
+  display:flex;align-items:center;gap:16px;padding:0 24px;
+  position:sticky;top:0;z-index:100;
+}
+.cp-back{
+  display:flex;align-items:center;gap:6px;
+  color:var(--text-mid);font-size:13px;cursor:pointer;
+  transition:color .15s;flex-shrink:0;
+}
+.cp-back:hover{color:var(--text-acc);}
+.cp-course-title{
+  font-size:14px;font-weight:700;color:var(--text);
+  flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+.cp-progress-wrap{display:flex;align-items:center;gap:10px;flex-shrink:0;}
+.cp-progress-bar{
+  width:120px;height:6px;background:rgba(74,0,177,0.2);
+  border-radius:3px;overflow:hidden;
+}
+.cp-progress-fill{height:100%;background:linear-gradient(90deg,#4A00B1,#7B2FBE);border-radius:3px;transition:width .3s;}
+.cp-progress-txt{font-size:12px;color:var(--text-dim);}
+
+.cp-layout{
+  display:grid;
+  grid-template-columns:1fr 340px;
+  min-height:calc(100vh - 56px);
+}
+.cp-main{flex:1;display:flex;flex-direction:column;}
+.cp-viewer{
+  background:#000;
+  position:relative;width:100%;
+  padding-top:56.25%;/* 16:9 */
+}
+.cp-viewer iframe,.cp-viewer .cp-viewer-inner{
+  position:absolute;top:0;left:0;width:100%;height:100%;
+  border:none;
+}
+.cp-viewer-inner{
+  display:flex;align-items:center;justify-content:center;
+  background:var(--card);padding:40px;text-align:center;
+}
+.cp-viewer-icon{font-size:64px;margin-bottom:16px;}
+.cp-viewer-label{font-size:16px;font-weight:700;color:var(--text);margin-bottom:8px;}
+.cp-viewer-sub{font-size:13px;color:var(--text-dim);margin-bottom:20px;}
+.cp-viewer-btn{
+  display:inline-flex;align-items:center;gap:8px;
+  padding:12px 28px;background:linear-gradient(135deg,#4A00B1,#7B2FBE);
+  color:#fff;font-size:14px;font-weight:700;border-radius:8px;
+  text-decoration:none;cursor:pointer;border:none;font-family:var(--font);
+  transition:opacity .15s;
+}
+.cp-viewer-btn:hover{opacity:.85;}
+
+.cp-info{padding:20px 24px;border-bottom:1px solid rgba(74,0,177,0.15);}
+.cp-item-title{font-size:18px;font-weight:800;color:var(--text);margin-bottom:6px;line-height:1.3;}
+.cp-item-type{
+  display:inline-flex;align-items:center;gap:5px;
+  font-size:12px;font-weight:700;padding:3px 12px;border-radius:20px;
+  background:rgba(74,0,177,0.15);color:var(--text-acc);
+}
+
+/* Sidebar */
+.cp-sidebar{
+  background:var(--card);
+  border-left:1px solid rgba(74,0,177,0.2);
+  display:flex;flex-direction:column;
+  overflow:hidden;
+}
+.cp-sidebar-head{
+  padding:16px 20px;
+  border-bottom:1px solid rgba(74,0,177,0.2);
+  font-size:13px;font-weight:700;color:var(--text);
+  display:flex;align-items:center;justify-content:space-between;
+  flex-shrink:0;
+}
+.cp-sidebar-head span{color:var(--text-dim);font-size:11px;font-weight:400;}
+.cp-sidebar-scroll{overflow-y:auto;flex:1;}
+.cp-sidebar-scroll::-webkit-scrollbar{width:4px;}
+.cp-sidebar-scroll::-webkit-scrollbar-thumb{background:rgba(74,0,177,0.3);border-radius:2px;}
+
+.cp-section-head{
+  padding:12px 20px 6px;
+  font-size:10px;font-weight:800;letter-spacing:.08em;
+  text-transform:uppercase;color:rgba(222,199,255,0.4);
+  background:rgba(10,2,20,0.5);
+  position:sticky;top:0;z-index:1;
+}
+.cp-item-row{
+  display:flex;align-items:center;gap:12px;
+  padding:11px 20px;cursor:pointer;
+  border-bottom:1px solid rgba(74,0,177,0.08);
+  transition:background .12s;
+}
+.cp-item-row:hover{background:rgba(74,0,177,0.1);}
+.cp-item-row.active-item{background:rgba(74,0,177,0.2);border-left:3px solid #7B2FBE;}
+.cp-item-row.active-item .cp-irow-name{color:var(--text-acc);}
+.cp-irow-icon{
+  width:32px;height:32px;border-radius:8px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:15px;flex-shrink:0;
+}
+.cp-irow-icon.t-video  {background:rgba(229,57,53,0.15);}
+.cp-irow-icon.t-pdf    {background:rgba(229,57,53,0.15);}
+.cp-irow-icon.t-picture{background:rgba(74,0,177,0.15);}
+.cp-irow-icon.t-link   {background:rgba(0,188,212,0.12);}
+.cp-irow-body{flex:1;min-width:0;}
+.cp-irow-name{font-size:12px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.4;}
+.cp-irow-type{font-size:10px;color:var(--text-dim);margin-top:2px;}
+.cp-irow-check{width:16px;height:16px;border-radius:50%;border:1.5px solid rgba(74,0,177,0.3);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:9px;}
+.cp-irow-check.done{background:#4A00B1;border-color:#4A00B1;color:#fff;}
+
+/* PDF full-view */
+.cp-pdf-wrap{position:absolute;top:0;left:0;width:100%;height:100%;}
+.cp-pdf-wrap iframe{width:100%;height:100%;border:none;}
+
+/* Empty state */
+.cp-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;height:400px;color:var(--text-dim);text-align:center;padding:40px;}
+.cp-empty-icon{font-size:56px;margin-bottom:16px;opacity:.4;}
+
+@media(max-width:768px){
+  .cp-layout{grid-template-columns:1fr;}
+  .cp-sidebar{max-height:50vh;}
+  .cp-progress-wrap{display:none;}
+}
 </style>
 </head>
 <body>
@@ -1656,99 +1785,37 @@ footer{
 <!-- ══════════════════════════════════════════════
      LOGIN PAGE
 ══════════════════════════════════════════════ -->
+<!-- ══════════════════════════════════════════════
+     STEP 1 — EMAIL ENTRY
+══════════════════════════════════════════════ -->
 <div id="page-login" class="page">
   <div class="auth-wrap">
     <div class="auth-glow"></div>
     <div class="auth-logo-wrap">
       <span style="font-size:26px;font-weight:900;color:var(--text);">Merito<em style="color:var(--text-acc);font-style:normal;">BD</em></span>
     </div>
-    <div class="auth-title">Welcome Back</div>
-    <div class="auth-sub">Sign in to continue your learning journey</div>
+    <div class="auth-title">Get Started</div>
+    <div class="auth-sub">Enter your email to continue your learning journey</div>
     <div class="auth-form">
       <div id="login-error" style="display:none;background:rgba(255,60,60,0.12);border:1px solid rgba(255,60,60,0.3);border-radius:8px;padding:12px 16px;margin-bottom:14px;font-size:13px;color:#ff6b6b;"></div>
       <div class="form-group">
-        <label class="form-label">Email</label>
-        <input id="login-email" class="form-input" type="email" placeholder="Enter your email">
+        <label class="form-label">Email Address</label>
+        <input id="login-email" class="form-input" type="email" placeholder="your@email.com"
+               onkeydown="if(event.key==='Enter') handleEmailSubmit()">
       </div>
-      <div class="form-group">
-        <label class="form-label">Password</label>
-        <input id="login-pass" class="form-input" type="password" placeholder="Enter your password">
-      </div>
-      <div style="text-align:right;margin-bottom:16px;">
-        <a style="font-size:13px;color:var(--text-acc);cursor:pointer;font-weight:700;">Forgot Password?</a>
-      </div>
-      <button class="btn-auth" onclick="handleLogin()">Sign In</button>
-      <div class="auth-divider">or continue with</div>
+      <button class="btn-auth" onclick="handleEmailSubmit()">Continue</button>
+      <div class="auth-divider">or</div>
       <button class="btn-google" onclick="handleGoogleLogin()">
         <svg width="18" height="18" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
         Continue with Google
       </button>
-      <div class="auth-switch">Don't have an account? <a onclick="go('register')">Register Free</a></div>
       <div style="text-align:center;margin-top:16px;"><a style="font-size:13px;color:var(--text-dim);cursor:pointer;" onclick="go('home')">← Back to Home</a></div>
     </div>
   </div>
 </div>
 
 <!-- ══════════════════════════════════════════════
-     REGISTER PAGE
-══════════════════════════════════════════════ -->
-<div id="page-register" class="page">
-  <div class="auth-wrap">
-    <div class="auth-glow"></div>
-    <div class="auth-logo-wrap">
-      <span style="font-size:26px;font-weight:900;color:var(--text);">Merito<em style="color:var(--text-acc);font-style:normal;">BD</em></span>
-    </div>
-    <div class="auth-title">Create Account</div>
-    <div class="auth-sub">Join 5,000+ students already learning with Merito</div>
-    <div class="auth-form">
-      <div id="reg-error" style="display:none;background:rgba(255,60,60,0.12);border:1px solid rgba(255,60,60,0.3);border-radius:8px;padding:12px 16px;margin-bottom:14px;font-size:13px;color:#ff6b6b;"></div>
-      <div class="form-row">
-        <div class="form-group" style="margin-bottom:0;">
-          <label class="form-label">First Name</label>
-          <input id="reg-firstname" class="form-input" type="text" placeholder="First name">
-        </div>
-        <div class="form-group" style="margin-bottom:0;">
-          <label class="form-label">Last Name</label>
-          <input id="reg-lastname" class="form-input" type="text" placeholder="Last name">
-        </div>
-      </div>
-      <div class="form-group">
-        <label class="form-label">Phone Number</label>
-        <input id="reg-phone" class="form-input" type="tel" placeholder="01XXXXXXXXX">
-      </div>
-      <div class="form-group">
-        <label class="form-label">Email Address</label>
-        <input id="reg-email" class="form-input" type="email" placeholder="your@email.com">
-      </div>
-      <div class="form-group">
-        <label class="form-label">Password</label>
-        <input id="reg-pass" class="form-input" type="password" placeholder="Minimum 8 characters">
-      </div>
-      <div class="form-group">
-        <label class="form-label">Confirm Password</label>
-        <input id="reg-pass2" class="form-input" type="password" placeholder="Repeat your password">
-      </div>
-      <div class="form-group">
-        <label class="form-label">Referral Code (optional)</label>
-        <input class="form-input" type="text" placeholder="Enter referral code if you have one">
-      </div>
-      <div class="form-group">
-        <label class="form-label">How did you hear about us?</label>
-        <input class="form-input" type="text" placeholder="e.g. Facebook, Friend, YouTube...">
-      </div>
-      <button class="btn-auth" onclick="handleRegister()">Create Account</button>
-      <div class="auth-divider">or</div>
-      <button class="btn-google" onclick="handleGoogleLogin()">
-        <svg width="18" height="18" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
-        Continue with Google
-      </button>
-      <div class="auth-switch">Already have an account? <a onclick="go('login')">Sign In</a></div>
-    </div>
-  </div>
-</div>
-
-<!-- ══════════════════════════════════════════════
-     VERIFY OTP PAGE
+     STEP 2 — OTP VERIFY
 ══════════════════════════════════════════════ -->
 <div id="page-verify" class="page">
   <div class="auth-wrap">
@@ -1756,19 +1823,77 @@ footer{
     <div class="auth-logo-wrap">
       <span style="font-size:26px;font-weight:900;color:var(--text);">Merito<em style="color:var(--text-acc);font-style:normal;">BD</em></span>
     </div>
-    <div class="auth-title">Verify Your Number</div>
-    <div class="auth-sub">We sent a 6-digit OTP to <strong style="color:var(--text-acc);">01XXXXXXXXX</strong></div>
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
+      <button onclick="go('login')" style="background:none;border:none;color:var(--text-dim);cursor:pointer;padding:0;font-size:20px;line-height:1;">←</button>
+      <div class="auth-title" style="margin-bottom:0;">Verify Email</div>
+    </div>
+    <div class="auth-sub">We sent a 6-digit code to <strong id="verify-email-display" style="color:var(--text-acc);">your email</strong></div>
     <div class="auth-form" style="max-width:380px;">
-      <div class="otp-row">
-        <input class="otp-input" maxlength="1" type="text">
-        <input class="otp-input" maxlength="1" type="text">
-        <input class="otp-input" maxlength="1" type="text">
-        <input class="otp-input" maxlength="1" type="text">
-        <input class="otp-input" maxlength="1" type="text">
-        <input class="otp-input" maxlength="1" type="text">
+      <div id="verify-error" style="display:none;background:rgba(255,60,60,0.12);border:1px solid rgba(255,60,60,0.3);border-radius:8px;padding:12px 16px;margin-bottom:14px;font-size:13px;color:#ff6b6b;"></div>
+      <div class="otp-row" id="otp-row">
+        <input class="otp-input" maxlength="1" type="text" inputmode="numeric" pattern="[0-9]">
+        <input class="otp-input" maxlength="1" type="text" inputmode="numeric" pattern="[0-9]">
+        <input class="otp-input" maxlength="1" type="text" inputmode="numeric" pattern="[0-9]">
+        <input class="otp-input" maxlength="1" type="text" inputmode="numeric" pattern="[0-9]">
+        <input class="otp-input" maxlength="1" type="text" inputmode="numeric" pattern="[0-9]">
+        <input class="otp-input" maxlength="1" type="text" inputmode="numeric" pattern="[0-9]">
       </div>
-      <button class="btn-auth" onclick="go('home')">Verify & Continue</button>
-      <div class="auth-switch" style="margin-top:16px;">Didn't receive? <a>Resend OTP</a> (30s)</div>
+      <button class="btn-auth" id="btn-verify-otp" onclick="handleVerifyOTP()">Verify & Continue</button>
+      <div style="text-align:center;margin-top:16px;font-size:13px;color:var(--text-dim);">
+        Didn't receive code?
+        <a id="resend-link" style="color:var(--text-acc);cursor:pointer;font-weight:700;pointer-events:none;opacity:.5;" onclick="handleResendOTP()">Resend</a>
+        <span id="otp-timer" style="color:var(--text-dim);margin-left:4px;"></span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     STEP 3 — PROFILE SETUP (new users only)
+══════════════════════════════════════════════ -->
+<div id="page-register" class="page">
+  <div class="auth-wrap">
+    <div class="auth-glow"></div>
+    <div class="auth-logo-wrap">
+      <span style="font-size:26px;font-weight:900;color:var(--text);">Merito<em style="color:var(--text-acc);font-style:normal;">BD</em></span>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
+      <button onclick="go('verify')" style="background:none;border:none;color:var(--text-dim);cursor:pointer;padding:0;font-size:20px;line-height:1;">←</button>
+      <div class="auth-title" style="margin-bottom:0;">Your Details</div>
+    </div>
+    <div class="auth-sub">One last step — set up your profile</div>
+    <div class="auth-form">
+      <div id="reg-error" style="display:none;background:rgba(255,60,60,0.12);border:1px solid rgba(255,60,60,0.3);border-radius:8px;padding:12px 16px;margin-bottom:14px;font-size:13px;color:#ff6b6b;"></div>
+      <div class="form-group">
+        <label class="form-label">Email Address</label>
+        <input id="reg-email-display" class="form-input" type="email" readonly
+               style="opacity:.65;cursor:not-allowed;">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Your Full Name</label>
+        <input id="reg-name" class="form-input" type="text" placeholder="Enter your full name"
+               onkeydown="if(event.key==='Enter') document.getElementById('reg-pass').focus()">
+        <div style="font-size:11px;color:var(--text-dim);margin-top:4px;">Your name cannot be changed later.</div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Set Password</label>
+        <div style="position:relative;">
+          <input id="reg-pass" class="form-input" type="password" placeholder="Minimum 8 characters"
+                 style="padding-right:44px;"
+                 onkeydown="if(event.key==='Enter') document.getElementById('reg-pass2').focus()">
+          <button type="button" onclick="togglePwVis('reg-pass','eye1')" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--text-dim);cursor:pointer;padding:0;font-size:16px;" id="eye1">👁</button>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Confirm Password</label>
+        <div style="position:relative;">
+          <input id="reg-pass2" class="form-input" type="password" placeholder="Repeat your password"
+                 style="padding-right:44px;"
+                 onkeydown="if(event.key==='Enter') handleProfileSetup()">
+          <button type="button" onclick="togglePwVis('reg-pass2','eye2')" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--text-dim);cursor:pointer;padding:0;font-size:16px;" id="eye2">👁</button>
+        </div>
+      </div>
+      <button class="btn-auth" onclick="handleProfileSetup()">Complete Setup</button>
     </div>
   </div>
 </div>
@@ -2098,6 +2223,61 @@ footer{
       <a class="book-card"><div class="book-cover"><div class="book-cover-inner">📘</div></div><div class="book-body"><div class="book-title">1000 Mnemonic Vocabulary</div><div class="book-author">By Merito Team</div><div class="book-price">৳420</div></div></a>
       <a class="book-card"><div class="book-cover"><div class="book-cover-inner">📙</div></div><div class="book-body"><div class="book-title">HSC English Grammar Complete</div><div class="book-author">By HSC Team</div><div class="book-price">৳250</div></div></a>
       <a class="book-card"><div class="book-cover"><div class="book-cover-inner">📒</div></div><div class="book-body"><div class="book-title">BBA Admission Strategy 2026</div><div class="book-author">By Merito Team</div><div class="book-price">৳380</div></div></a>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     COURSE PLAYER PAGE
+══════════════════════════════════════════════ -->
+<div id="page-course-player" class="page">
+  <!-- Top bar -->
+  <div class="cp-topbar">
+    <div class="cp-back" onclick="go('profile')">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M15 18l-6-6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      Back
+    </div>
+    <div class="cp-course-title" id="cp-course-title">Course</div>
+    <div class="cp-progress-wrap">
+      <div class="cp-progress-bar"><div class="cp-progress-fill" id="cp-progress-fill" style="width:0%"></div></div>
+      <div class="cp-progress-txt" id="cp-progress-txt">0%</div>
+    </div>
+  </div>
+
+  <!-- Layout -->
+  <div class="cp-layout">
+    <!-- Main content area -->
+    <div class="cp-main">
+      <!-- Video/PDF/Picture viewer -->
+      <div class="cp-viewer" id="cp-viewer">
+        <div class="cp-viewer-inner" id="cp-viewer-placeholder">
+          <div>
+            <div class="cp-viewer-icon">▶</div>
+            <div class="cp-viewer-label">Select a lesson to begin</div>
+            <div class="cp-viewer-sub">Choose any lesson from the sidebar to start learning</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Item info below viewer -->
+      <div class="cp-info" id="cp-info" style="display:none;">
+        <div class="cp-item-title" id="cp-item-title"></div>
+        <div style="margin-top:6px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+          <span class="cp-item-type" id="cp-item-type"></span>
+          <span style="font-size:12px;color:var(--text-dim);" id="cp-item-desc"></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sidebar -->
+    <div class="cp-sidebar">
+      <div class="cp-sidebar-head">
+        Course Content
+        <span id="cp-item-count">0 items</span>
+      </div>
+      <div class="cp-sidebar-scroll" id="cp-sidebar-list">
+        <div class="cp-empty"><div class="cp-empty-icon">📂</div><div style="font-size:14px;">Loading content…</div></div>
+      </div>
     </div>
   </div>
 </div>
@@ -2530,94 +2710,187 @@ function renderAllCourseGrids() {
 }
 
 /* ══════════════════════════════════════════════
-   REGISTER
+   AUTH FLOW — 3-STEP: EMAIL → OTP → PROFILE
 ══════════════════════════════════════════════ */
-async function handleRegister() {
-  const firstName = document.getElementById('reg-firstname').value.trim();
-  const lastName  = document.getElementById('reg-lastname').value.trim();
-  const phone     = document.getElementById('reg-phone').value.trim();
-  const email     = document.getElementById('reg-email').value.trim();
-  const pass      = document.getElementById('reg-pass').value;
-  const pass2     = document.getElementById('reg-pass2').value;
-  const errBox    = document.getElementById('reg-error');
+let _authEmail    = '';
+let _otpTimerRef  = null;
 
+// ── Step 1: Email submit ──
+async function handleEmailSubmit() {
+  const email  = document.getElementById('login-email').value.trim().toLowerCase();
+  const errBox = document.getElementById('login-error');
   errBox.style.display = 'none';
 
-  if (!firstName || !email || !pass) {
-    errBox.textContent = 'Please fill in First Name, Email and Password.';
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    errBox.textContent = 'Please enter a valid email address.';
+    errBox.style.display = 'block'; return;
+  }
+
+  const btn = document.querySelector('#page-login .btn-auth');
+  btn.textContent = 'Sending code…'; btn.disabled = true;
+
+  const { error } = await sb.auth.signInWithOtp({
+    email,
+    options: { shouldCreateUser: true }
+  });
+
+  btn.textContent = 'Continue'; btn.disabled = false;
+
+  if (error) {
+    errBox.textContent = error.message || 'Failed to send code. Try again.';
+    errBox.style.display = 'block'; return;
+  }
+
+  _authEmail = email;
+  document.getElementById('verify-email-display').textContent = email;
+  // clear OTP boxes
+  document.querySelectorAll('#otp-row .otp-input').forEach(i => i.value = '');
+  document.getElementById('verify-error').style.display = 'none';
+  go('verify');
+  _startOTPTimer(120);
+  setTimeout(() => { const first = document.querySelector('#otp-row .otp-input'); if(first) first.focus(); }, 200);
+}
+
+// ── Step 2: OTP Verify ──
+async function handleVerifyOTP() {
+  const inputs = document.querySelectorAll('#otp-row .otp-input');
+  const token  = Array.from(inputs).map(i => i.value.trim()).join('');
+  const errBox = document.getElementById('verify-error');
+  errBox.style.display = 'none';
+
+  if (token.length < 6) {
+    errBox.textContent = 'Enter the 6-digit code sent to your email.';
+    errBox.style.display = 'block'; return;
+  }
+
+  const btn = document.getElementById('btn-verify-otp');
+  btn.textContent = 'Verifying…'; btn.disabled = true;
+
+  const { data, error } = await sb.auth.verifyOtp({
+    email: _authEmail,
+    token,
+    type: 'email'
+  });
+
+  btn.textContent = 'Verify & Continue'; btn.disabled = false;
+
+  if (error) {
+    errBox.textContent = error.message || 'Invalid or expired code. Try again.';
+    errBox.style.display = 'block'; return;
+  }
+
+  // OTP verified — session is now active
+  if (_otpTimerRef) clearInterval(_otpTimerRef);
+  currentUser = data.user;
+
+  // Check if this is a new user (no full_name in profile)
+  const { data: profile } = await sb.from('profiles').select('full_name').eq('id', currentUser.id).single();
+  const isNew = !profile || !profile.full_name;
+
+  if (isNew) {
+    // New user — show profile setup
+    document.getElementById('reg-email-display').value = _authEmail;
+    document.getElementById('reg-name').value  = '';
+    document.getElementById('reg-pass').value  = '';
+    document.getElementById('reg-pass2').value = '';
+    document.getElementById('reg-error').style.display = 'none';
+    go('register');
+    setTimeout(() => { const n = document.getElementById('reg-name'); if(n) n.focus(); }, 200);
+  } else {
+    // Existing user — upsert profile and go home
+    await upsertProfile(currentUser);
+    updateNavUI(true);
+    go('home');
+    toast('Welcome back!', 'success');
+  }
+}
+
+// ── Step 3: Profile setup (new users) ──
+async function handleProfileSetup() {
+  const name   = document.getElementById('reg-name').value.trim();
+  const pass   = document.getElementById('reg-pass').value;
+  const pass2  = document.getElementById('reg-pass2').value;
+  const errBox = document.getElementById('reg-error');
+  errBox.style.display = 'none';
+
+  if (!name) {
+    errBox.textContent = 'Please enter your full name.';
+    errBox.style.display = 'block'; return;
+  }
+  if (!pass || pass.length < 8) {
+    errBox.textContent = 'Password must be at least 8 characters.';
     errBox.style.display = 'block'; return;
   }
   if (pass !== pass2) {
     errBox.textContent = 'Passwords do not match.';
     errBox.style.display = 'block'; return;
   }
-  if (pass.length < 8) {
-    errBox.textContent = 'Password must be at least 8 characters.';
-    errBox.style.display = 'block'; return;
-  }
 
   const btn = document.querySelector('#page-register .btn-auth');
-  btn.textContent = 'Creating account…'; btn.disabled = true;
+  btn.textContent = 'Setting up…'; btn.disabled = true;
 
-  const fullName = (firstName + ' ' + lastName).trim();
-  const { data: signUpData, error } = await sb.auth.signUp({
-    email, password: pass,
-    options: { data: { full_name: fullName, phone } }
-  });
-
-  btn.textContent = 'Create Account'; btn.disabled = false;
-
-  if (error) {
-    errBox.textContent = error.message;
+  // Set password
+  const { error: pwErr } = await sb.auth.updateUser({ password: pass });
+  if (pwErr) {
+    btn.textContent = 'Complete Setup'; btn.disabled = false;
+    errBox.textContent = pwErr.message || 'Failed to set password.';
     errBox.style.display = 'block'; return;
   }
 
-  // If session is returned immediately (email confirm disabled), upsert profile now
-  if (signUpData?.session) {
-    currentUser = signUpData.session.user;
-    await upsertProfile(currentUser);
-    updateNavUI(true);
-    go('home');
-    return;
-  }
+  // Update user metadata + upsert profile
+  await sb.auth.updateUser({ data: { full_name: name } });
+  const { data: { user } } = await sb.auth.getUser();
+  currentUser = user;
+  await upsertProfile({ ...currentUser, user_metadata: { ...currentUser.user_metadata, full_name: name } });
 
-  // Email confirmation required
-  errBox.style.background = 'rgba(0,200,100,0.12)';
-  errBox.style.borderColor = 'rgba(0,200,100,0.3)';
-  errBox.style.color = '#4CAF50';
-  errBox.textContent = '✅ Account created! Check your email to confirm, then log in.';
-  errBox.style.display = 'block';
-  setTimeout(() => go('login'), 3000);
+  btn.textContent = 'Complete Setup'; btn.disabled = false;
+  updateNavUI(true);
+  go('home');
+  toast('Welcome to Merito!', 'success');
 }
 
-/* ══════════════════════════════════════════════
-   LOGIN
-══════════════════════════════════════════════ */
-async function handleLogin() {
-  const email  = document.getElementById('login-email').value.trim();
-  const pass   = document.getElementById('login-pass').value;
-  const errBox = document.getElementById('login-error');
+// ── Resend OTP ──
+async function handleResendOTP() {
+  const link = document.getElementById('resend-link');
+  if (!_authEmail || link.style.pointerEvents === 'none') return;
 
-  errBox.style.display = 'none';
+  link.style.pointerEvents = 'none'; link.style.opacity = '.5';
+  await sb.auth.signInWithOtp({ email: _authEmail, options: { shouldCreateUser: true } });
+  document.querySelectorAll('#otp-row .otp-input').forEach(i => i.value = '');
+  document.getElementById('verify-error').style.display = 'none';
+  _startOTPTimer(120);
+  toast('Code resent!', 'success');
+}
 
-  if (!email || !pass) {
-    errBox.textContent = 'Please enter your email and password.';
-    errBox.style.display = 'block'; return;
-  }
+function _startOTPTimer(secs) {
+  if (_otpTimerRef) clearInterval(_otpTimerRef);
+  const timerEl  = document.getElementById('otp-timer');
+  const resendEl = document.getElementById('resend-link');
+  resendEl.style.pointerEvents = 'none';
+  resendEl.style.opacity = '.5';
 
-  const btn = document.querySelector('#page-login .btn-auth');
-  btn.textContent = 'Signing in…'; btn.disabled = true;
+  let remaining = secs;
+  const tick = () => {
+    const m = String(Math.floor(remaining / 60)).padStart(2,'0');
+    const s = String(remaining % 60).padStart(2,'0');
+    timerEl.textContent = `(${m}:${s})`;
+    if (remaining <= 0) {
+      clearInterval(_otpTimerRef);
+      timerEl.textContent = '';
+      resendEl.style.pointerEvents = 'auto';
+      resendEl.style.opacity = '1';
+    }
+    remaining--;
+  };
+  tick();
+  _otpTimerRef = setInterval(tick, 1000);
+}
 
-  const { error } = await sb.auth.signInWithPassword({ email, password: pass });
-
-  btn.textContent = 'Sign In'; btn.disabled = false;
-
-  if (error) {
-    errBox.textContent = 'Wrong email or password. Please try again.';
-    errBox.style.display = 'block'; return;
-  }
-
-  go('home');
+function togglePwVis(inputId, btnId) {
+  const inp = document.getElementById(inputId);
+  const btn = document.getElementById(btnId);
+  if (inp.type === 'password') { inp.type = 'text'; btn.textContent = '🙈'; }
+  else { inp.type = 'password'; btn.textContent = '👁'; }
 }
 
 /* ══════════════════════════════════════════════
@@ -2777,33 +3050,248 @@ async function loadProfileData() {
 
   const { data: profile } = await sb.from('profiles').select('*').eq('id', currentUser.id).single();
   if (profile) {
-    const nameEl = document.querySelector('.profile-name');
-    const avEl   = document.querySelector('.profile-av');
-    if (nameEl) nameEl.textContent = profile.full_name || 'Student';
-    if (avEl)   avEl.textContent   = (profile.full_name || 'ST').slice(0,2).toUpperCase();
+    const nameEl  = document.querySelector('.profile-name');
+    const emailEl = document.querySelector('.profile-email');
+    const avEl    = document.querySelector('.profile-av');
+    if (nameEl)  nameEl.textContent  = profile.full_name || 'Student';
+    if (emailEl) emailEl.textContent = profile.email || currentUser.email || '';
+    if (avEl)    avEl.textContent    = (profile.full_name || 'ST').slice(0,2).toUpperCase();
   }
 
-  // Load enrolled courses
+  // Load enrolled courses via course_enrollments (uses user_email)
+  const userEmail = currentUser.email;
   const { data: enrollments } = await sb
-    .from('enrollments')
-    .select('courses(*)')
-    .eq('user_id', currentUser.id);
+    .from('course_enrollments')
+    .select('course_id')
+    .eq('user_email', userEmail);
 
   const pg = document.getElementById('prof-grid');
-  if (pg) {
-    if (!enrollments || enrollments.length === 0) {
-      pg.innerHTML = '<p style="color:var(--text-dim);font-size:14px;grid-column:1/-1;">You have no enrolled courses yet.</p>';
-    } else {
-      const mapped = enrollments.map(e => ({
-        id: e.courses.id, cat: e.courses.cat, catName: e.courses.cat_name,
-        title: e.courses.title, instructor: e.courses.instructor,
-        lessons: e.courses.lessons, rating: String(e.courses.rating),
-        price: e.courses.price, oldPrice: e.courses.old_price,
-        icon: e.courses.icon, badge: e.courses.badge || '', desc: e.courses.description
-      }));
-      pg.innerHTML = mapped.map(courseCard).join('');
-    }
+  if (!pg) return;
+
+  if (!enrollments || enrollments.length === 0) {
+    pg.innerHTML = '<p style="color:var(--text-dim);font-size:14px;grid-column:1/-1;">You have no enrolled courses yet. <a onclick="go(\'courses\')" style="color:var(--text-acc);cursor:pointer;">Browse courses →</a></p>';
+    return;
   }
+
+  const enrolledIds = enrollments.map(e => e.course_id);
+  const { data: coursesData } = await sb.from('courses').select('*').in('id', enrolledIds);
+  if (!coursesData) { pg.innerHTML = '<p style="color:var(--text-dim);grid-column:1/-1;">Could not load courses.</p>'; return; }
+
+  pg.innerHTML = coursesData.map(c => {
+    const mapped = {
+      id: c.id, cat: c.cat, catName: c.cat_name, title: c.title,
+      instructor: c.instructor, lessons: c.lessons, rating: String(c.rating||'5.0'),
+      price: c.price, oldPrice: c.old_price, icon: c.icon || '📚', badge: c.badge || '', desc: c.description
+    };
+    return enrolledCourseCard(mapped);
+  }).join('');
+}
+
+/* ══════════════════════════════════════════════
+   COURSE PLAYER
+══════════════════════════════════════════════ */
+let _cpCourseId = null;
+let _cpItems    = [];   // flat list of all content items
+let _cpCompleted = {};  // { itemId: true }
+
+async function openCoursePlayer(courseId) {
+  _cpCourseId  = courseId;
+  _cpCompleted = JSON.parse(localStorage.getItem('cp_done_'+courseId) || '{}');
+
+  // Set course title immediately while loading
+  const known = [...(window.COURSES||[])];
+  const c = known.find(x => x.id == courseId);
+  document.getElementById('cp-course-title').textContent = c ? c.title : 'Course';
+
+  // Navigate to the player page
+  go('course-player');
+
+  // Reset viewer
+  document.getElementById('cp-viewer').innerHTML = `
+    <div class="cp-viewer-inner" id="cp-viewer-placeholder">
+      <div>
+        <div class="cp-viewer-icon">⏳</div>
+        <div class="cp-viewer-label">Loading course content…</div>
+        <div class="cp-viewer-sub">Please wait</div>
+      </div>
+    </div>`;
+  document.getElementById('cp-info').style.display = 'none';
+  document.getElementById('cp-sidebar-list').innerHTML =
+    '<div class="cp-empty"><div class="cp-empty-icon">📂</div><div style="font-size:14px;">Loading…</div></div>';
+
+  await loadCourseContent(courseId);
+}
+
+async function loadCourseContent(courseId) {
+  // Fetch course info for title
+  const { data: courseRow } = await sb.from('courses').select('title').eq('id', courseId).single();
+  if (courseRow) document.getElementById('cp-course-title').textContent = courseRow.title;
+
+  // Fetch content items grouped by section
+  const { data: items, error } = await sb
+    .from('course_content')
+    .select('*')
+    .eq('course_id', courseId)
+    .order('section_order', { ascending: true })
+    .order('item_order', { ascending: true });
+
+  if (error || !items || items.length === 0) {
+    document.getElementById('cp-sidebar-list').innerHTML =
+      '<div class="cp-empty"><div class="cp-empty-icon">📭</div><div style="font-size:14px;">No content yet.</div><div style="font-size:12px;margin-top:6px;color:var(--text-dim);">The instructor hasn\'t uploaded lessons yet.</div></div>';
+    document.getElementById('cp-viewer').innerHTML = `
+      <div class="cp-viewer-inner">
+        <div>
+          <div class="cp-viewer-icon">📭</div>
+          <div class="cp-viewer-label">No lessons available yet</div>
+          <div class="cp-viewer-sub">Check back soon — the instructor is preparing content.</div>
+        </div>
+      </div>`;
+    return;
+  }
+
+  _cpItems = items;
+  document.getElementById('cp-item-count').textContent = items.length + ' item' + (items.length !== 1 ? 's' : '');
+  _renderCPSidebar(items);
+  _updateCPProgress();
+
+  // Auto-play first item
+  _playCPItem(items[0]);
+}
+
+function _renderCPSidebar(items) {
+  const list = document.getElementById('cp-sidebar-list');
+  // Group by section
+  const sections = {};
+  const sectionOrder = [];
+  items.forEach(item => {
+    const sec = item.section_title || 'Lessons';
+    if (!sections[sec]) { sections[sec] = []; sectionOrder.push(sec); }
+    sections[sec].push(item);
+  });
+
+  let html = '';
+  sectionOrder.forEach(sec => {
+    html += `<div class="cp-section-head">${sec}</div>`;
+    sections[sec].forEach(item => {
+      const done = _cpCompleted[item.id] ? true : false;
+      const typeInfo = _cpItemMeta(item.type);
+      html += `
+        <div class="cp-item-row" id="cprow-${item.id}" onclick="_playCPById('${item.id}')">
+          <div class="cp-irow-icon t-${item.type}">${typeInfo.icon}</div>
+          <div class="cp-irow-body">
+            <div class="cp-irow-name">${item.title}</div>
+            <div class="cp-irow-type">${typeInfo.label}</div>
+          </div>
+          <div class="cp-irow-check ${done ? 'done' : ''}">${done ? '✓' : ''}</div>
+        </div>`;
+    });
+  });
+  list.innerHTML = html;
+}
+
+function _cpItemMeta(type) {
+  switch(type) {
+    case 'video':   return { icon: '▶', label: 'Video' };
+    case 'pdf':     return { icon: '📄', label: 'PDF' };
+    case 'picture': return { icon: '🖼', label: 'Image' };
+    case 'link':    return { icon: '🔗', label: 'Link' };
+    default:        return { icon: '📌', label: type || 'Content' };
+  }
+}
+
+function _playCPById(id) {
+  const item = _cpItems.find(x => String(x.id) === String(id));
+  if (item) _playCPItem(item);
+}
+
+function _playCPItem(item) {
+  // Mark active in sidebar
+  document.querySelectorAll('.cp-item-row').forEach(r => r.classList.remove('active-item'));
+  const row = document.getElementById('cprow-' + item.id);
+  if (row) { row.classList.add('active-item'); row.scrollIntoView({ block: 'nearest' }); }
+
+  // Mark as completed
+  _cpCompleted[item.id] = true;
+  localStorage.setItem('cp_done_' + _cpCourseId, JSON.stringify(_cpCompleted));
+  _updateCPProgress();
+  if (row) { const chk = row.querySelector('.cp-irow-check'); if (chk) { chk.classList.add('done'); chk.textContent = '✓'; } }
+
+  // Show info strip
+  const info = document.getElementById('cp-info');
+  info.style.display = 'block';
+  document.getElementById('cp-item-title').textContent = item.title || '';
+  const meta = _cpItemMeta(item.type);
+  document.getElementById('cp-item-type').textContent = meta.label;
+  document.getElementById('cp-item-desc').textContent  = item.description || '';
+
+  // Render viewer
+  const viewer = document.getElementById('cp-viewer');
+  if (item.type === 'video') {
+    const url = item.content_url || '';
+    let embedSrc = '';
+    // Support YouTube links
+    const ytMatch = url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/))([A-Za-z0-9_-]{11})/);
+    if (ytMatch) {
+      embedSrc = 'https://www.youtube.com/embed/' + ytMatch[1] + '?autoplay=1&rel=0';
+    } else {
+      embedSrc = url; // direct video URL or other embed
+    }
+    viewer.innerHTML = embedSrc
+      ? `<iframe src="${embedSrc}" allowfullscreen allow="autoplay; encrypted-media" frameborder="0" style="position:absolute;top:0;left:0;width:100%;height:100%;border:none;"></iframe>`
+      : `<div class="cp-viewer-inner"><div class="cp-viewer-icon">🎬</div><div class="cp-viewer-label">No video URL</div></div>`;
+
+  } else if (item.type === 'pdf') {
+    const url = item.content_url || '';
+    viewer.innerHTML = url
+      ? `<div class="cp-pdf-wrap" style="position:absolute;top:0;left:0;width:100%;height:100%;"><iframe src="${url}" style="width:100%;height:100%;border:none;"></iframe></div>`
+      : `<div class="cp-viewer-inner"><div class="cp-viewer-icon">📄</div><div class="cp-viewer-label">No PDF URL provided</div></div>`;
+
+  } else if (item.type === 'picture') {
+    const url = item.content_url || '';
+    viewer.innerHTML = url
+      ? `<div class="cp-viewer-inner" style="background:#0a0214;"><img src="${url}" style="max-width:100%;max-height:100%;object-fit:contain;border-radius:8px;" alt="${item.title||''}"></div>`
+      : `<div class="cp-viewer-inner"><div class="cp-viewer-icon">🖼</div><div class="cp-viewer-label">No image URL provided</div></div>`;
+
+  } else if (item.type === 'link') {
+    const url = item.content_url || '';
+    viewer.innerHTML = `
+      <div class="cp-viewer-inner">
+        <div>
+          <div class="cp-viewer-icon">🔗</div>
+          <div class="cp-viewer-label">${item.title || 'External Resource'}</div>
+          <div class="cp-viewer-sub">${item.description || url}</div>
+          ${url ? `<a href="${url}" target="_blank" class="cp-viewer-btn">Open Link <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6M15 3h6v6M10 14L21 3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></a>` : ''}
+        </div>
+      </div>`;
+  } else {
+    viewer.innerHTML = `<div class="cp-viewer-inner"><div class="cp-viewer-icon">📌</div><div class="cp-viewer-label">${item.title}</div><div class="cp-viewer-sub">${item.description||''}</div></div>`;
+  }
+}
+
+function _updateCPProgress() {
+  if (!_cpItems.length) return;
+  const pct = Math.round(Object.keys(_cpCompleted).length / _cpItems.length * 100);
+  document.getElementById('cp-progress-fill').style.width = pct + '%';
+  document.getElementById('cp-progress-txt').textContent  = pct + '%';
+}
+
+function enrolledCourseCard(c) {
+  return `<div class="course-card" onclick="openCoursePlayer(${c.id})" style="cursor:pointer;">
+    <div class="course-thumb">
+      <div class="course-thumb-inner">
+        <div class="course-thumb-emoji">${c.icon}</div>
+      </div>
+      <div style="position:absolute;top:10px;left:10px;z-index:2;">
+        <span class="badge badge-purple" style="background:rgba(74,0,177,0.85);color:#fff;font-size:10px;padding:3px 10px;border-radius:20px;">ENROLLED</span>
+      </div>
+    </div>
+    <div class="course-body">
+      <div class="course-cat">${c.catName||''}</div>
+      <div class="course-title">${c.title}</div>
+      <div class="course-meta"><span>📹 ${c.lessons||0}+ lessons</span><span class="course-rating">★ ${c.rating}</span></div>
+      <button class="btn-enroll" style="background:linear-gradient(135deg,#4A00B1,#7B2FBE);margin-top:10px;">▶ Continue Learning</button>
+    </div>
+  </div>`;
 }
 
 /* ══════════════════════════════════════════════
@@ -2859,7 +3347,7 @@ function go(page) {
   if (!el) return;
   el.classList.add('active');
   window.scrollTo({top:0,behavior:'smooth'});
-  const noNav = ['login','register','verify'];
+  const noNav = ['login', 'register', 'verify'];
   document.getElementById('main-nav').style.display = noNav.includes(page) ? 'none' : 'flex';
   document.getElementById('mob-nav').style.display  = noNav.includes(page) ? 'none' : 'block';
   setTimeout(() => {
@@ -2869,6 +3357,11 @@ function go(page) {
   if (page === 'profile') loadProfileData();
   if (page === 'order-track') loadOrderHistory();
   if (page === 'cart') renderCart();
+  // Hide nav for course-player (full-screen experience)
+  if (page === 'course-player') {
+    document.getElementById('main-nav').style.display = 'none';
+    document.getElementById('mob-nav').style.display  = 'none';
+  }
 }
 
 function openCourse(id) {
@@ -3271,10 +3764,45 @@ function profTab(tab, el) {
 }
 
 /* ── OTP inputs ── */
+/* ── Toast notification ── */
+function toast(msg, type) {
+  let el = document.getElementById('site-toast');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'site-toast';
+    el.style.cssText = 'position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(20px);background:#1e0a35;color:#fff;padding:12px 24px;border-radius:10px;font-size:14px;font-weight:600;z-index:9999;opacity:0;transition:opacity .25s,transform .25s;pointer-events:none;border:1px solid rgba(74,0,177,0.4);box-shadow:0 8px 32px rgba(0,0,0,0.4);';
+    document.body.appendChild(el);
+  }
+  el.textContent = msg;
+  if (type === 'success') el.style.borderColor = 'rgba(0,200,100,0.5)';
+  else el.style.borderColor = 'rgba(74,0,177,0.4)';
+  el.style.opacity = '1';
+  el.style.transform = 'translateX(-50%) translateY(0)';
+  clearTimeout(el._t);
+  el._t = setTimeout(() => { el.style.opacity = '0'; el.style.transform = 'translateX(-50%) translateY(20px)'; }, 2800);
+}
+
 document.querySelectorAll('.otp-input').forEach((inp, i, arr) => {
-  inp.addEventListener('input', () => { if (inp.value && i < arr.length-1) arr[i+1].focus(); });
-  inp.addEventListener('keydown', e => { if (e.key==='Backspace' && !inp.value && i > 0) arr[i-1].focus(); });
-});-e 
+  inp.addEventListener('input', () => {
+    inp.value = inp.value.replace(/\D/g,'').slice(0,1);
+    if (inp.value && i < arr.length - 1) arr[i+1].focus();
+    // auto-submit when all filled
+    const full = Array.from(arr).every(x => x.value.length === 1);
+    if (full) handleVerifyOTP();
+  });
+  inp.addEventListener('keydown', e => {
+    if (e.key === 'Backspace' && !inp.value && i > 0) arr[i-1].focus();
+  });
+  inp.addEventListener('paste', e => {
+    e.preventDefault();
+    const paste = (e.clipboardData || window.clipboardData).getData('text').replace(/\D/g,'');
+    arr.forEach((box, j) => { box.value = paste[j] || ''; });
+    const last = Math.min(paste.length, arr.length) - 1;
+    if (last >= 0) arr[last].focus();
+    const full = Array.from(arr).every(x => x.value.length === 1);
+    if (full) handleVerifyOTP();
+  });
+});
 </script>
 </body>
 </html>
