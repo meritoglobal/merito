@@ -1486,7 +1486,7 @@ footer{
 
   <div class="nav-search">
     <svg width="16" height="16" fill="none" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8" stroke="#58677D" stroke-width="1.8"/><path d="M21 21l-4-4" stroke="#58677D" stroke-width="1.8" stroke-linecap="round"/></svg>
-    <input placeholder="Search courses, books...">
+    <input placeholder="Search courses, books..." autocomplete="new-password">
   </div>
 
   <div class="nav-right">
@@ -1568,7 +1568,7 @@ footer{
       <div class="hero-search" style="animation:fadeUp .65s .25s both;">
         <div class="hero-search-inner">
           <svg width="16" height="16" fill="none" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8" stroke="#58677D" stroke-width="1.8"/><path d="M21 21l-4-4" stroke="#58677D" stroke-width="1.8" stroke-linecap="round"/></svg>
-          <input id="st-hero_search_placeholder" placeholder="Search for a course or book...">
+          <input id="st-hero_search_placeholder" placeholder="Search for a course or book..." autocomplete="new-password">
         </div>
         <button class="btn-hero-search" id="st-hero_search_btn" onclick="go('courses')">Search</button>
       </div>
@@ -1875,8 +1875,12 @@ footer{
       <div class="form-group">
         <label class="form-label">Your Full Name</label>
         <input id="reg-name" class="form-input" type="text" placeholder="Enter your full name"
+               onkeydown="if(event.key==='Enter') document.getElementById('reg-phone').focus()">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Phone Number</label>
+        <input id="reg-phone" class="form-input" type="tel" placeholder="01XXXXXXXXX"
                onkeydown="if(event.key==='Enter') document.getElementById('reg-pass').focus()">
-        <div style="font-size:11px;color:var(--text-dim);margin-top:4px;">Your name cannot be changed later.</div>
       </div>
       <div class="form-group">
         <label class="form-label">Set Password</label>
@@ -2307,18 +2311,12 @@ let activeCart = []; // [{courseId, title, price, icon}]
 let currentCourseId = null;
 let activePaymentMethod = 'bkash';
 
-/* ── On page load: check if already logged in ── */
+/* ── On page load ── */
 window.addEventListener('DOMContentLoaded', async () => {
-  const { data: { session } } = await sb.auth.getSession();
-  if (session) {
-    currentUser = session.user;
-    await upsertProfile(currentUser); // ensure profile exists in DB
-    updateNavUI(true);
-    loadNotifications();
-  }
   loadSiteText();
   await loadCourses();
   go('home');
+  // Session is restored by onAuthStateChange INITIAL_SESSION below
 });
 
 /* ── Load site text from site_settings ── */
@@ -2416,12 +2414,30 @@ function extractYTId(url) {
 
 /* ── Auth state listener ── */
 sb.auth.onAuthStateChange(async (event, session) => {
-  if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+  if (event === 'INITIAL_SESSION') {
+    // Page refresh — restore session silently without navigating
+    if (!session) return; // not logged in
     currentUser = session.user;
-    await upsertProfile(session.user); // sync to profiles table so admin panel sees user
+    await upsertProfile(currentUser);
     updateNavUI(true);
     loadNotifications();
-    if (event === 'SIGNED_IN') go('home');
+    // If profile is incomplete, force setup even on refresh
+    const complete = await checkProfileComplete(currentUser);
+    if (!complete) showProfileSetup(currentUser);
+
+  } else if (event === 'SIGNED_IN') {
+    currentUser = session.user;
+    await upsertProfile(currentUser);
+    updateNavUI(true);
+    loadNotifications();
+    const complete = await checkProfileComplete(currentUser);
+    if (!complete) { showProfileSetup(currentUser); return; }
+    go('home');
+
+  } else if (event === 'TOKEN_REFRESHED') {
+    currentUser = session.user;
+    updateNavUI(true);
+
   } else if (event === 'SIGNED_OUT') {
     currentUser = null;
     activeCart = [];
@@ -2430,6 +2446,26 @@ sb.auth.onAuthStateChange(async (event, session) => {
     go('home');
   }
 });
+
+/* ── Check if user profile is fully complete ── */
+async function checkProfileComplete(user) {
+  if (!user) return false;
+  const { data: profile } = await sb.from('profiles').select('full_name,phone').eq('id', user.id).single();
+  const hasPassword = !!(user.user_metadata?.has_password);
+  return !!(profile?.full_name && profile?.phone && hasPassword);
+}
+
+/* ── Show forced profile setup page ── */
+function showProfileSetup(user) {
+  const meta = user.user_metadata || {};
+  document.getElementById('reg-email-display').value = user.email || '';
+  document.getElementById('reg-name').value  = meta.full_name || meta.name || '';
+  document.getElementById('reg-phone').value = meta.phone || '';
+  document.getElementById('reg-pass').value  = '';
+  document.getElementById('reg-pass2').value = '';
+  document.getElementById('reg-error').style.display = 'none';
+  go('register');
+}
 
 /* ── Upsert user into profiles table ── */
 async function upsertProfile(user) {
@@ -2785,24 +2821,15 @@ async function handleVerifyOTP() {
   // OTP verified — session is now active
   if (_otpTimerRef) clearInterval(_otpTimerRef);
   currentUser = data.user;
-
-  // Check if this is a new user (no full_name in profile)
-  const { data: profile } = await sb.from('profiles').select('full_name').eq('id', currentUser.id).single();
-  const isNew = !profile || !profile.full_name;
-
-  if (isNew) {
-    // New user — show profile setup
-    document.getElementById('reg-email-display').value = _authEmail;
-    document.getElementById('reg-name').value  = '';
-    document.getElementById('reg-pass').value  = '';
-    document.getElementById('reg-pass2').value = '';
-    document.getElementById('reg-error').style.display = 'none';
-    go('register');
+  await upsertProfile(currentUser);
+  updateNavUI(true);
+  loadNotifications();
+  // Profile completeness check handles both new and returning users
+  const complete = await checkProfileComplete(currentUser);
+  if (!complete) {
+    showProfileSetup(currentUser);
     setTimeout(() => { const n = document.getElementById('reg-name'); if(n) n.focus(); }, 200);
   } else {
-    // Existing user — upsert profile and go home
-    await upsertProfile(currentUser);
-    updateNavUI(true);
     go('home');
     toast('Welcome back!', 'success');
   }
@@ -2811,6 +2838,7 @@ async function handleVerifyOTP() {
 // ── Step 3: Profile setup (new users) ──
 async function handleProfileSetup() {
   const name   = document.getElementById('reg-name').value.trim();
+  const phone  = document.getElementById('reg-phone').value.trim();
   const pass   = document.getElementById('reg-pass').value;
   const pass2  = document.getElementById('reg-pass2').value;
   const errBox = document.getElementById('reg-error');
@@ -2818,6 +2846,10 @@ async function handleProfileSetup() {
 
   if (!name) {
     errBox.textContent = 'Please enter your full name.';
+    errBox.style.display = 'block'; return;
+  }
+  if (!phone) {
+    errBox.textContent = 'Phone number is required.';
     errBox.style.display = 'block'; return;
   }
   if (!pass || pass.length < 8) {
@@ -2830,21 +2862,28 @@ async function handleProfileSetup() {
   }
 
   const btn = document.querySelector('#page-register .btn-auth');
-  btn.textContent = 'Setting up…'; btn.disabled = true;
+  btn.textContent = 'Saving…'; btn.disabled = true;
 
-  // Set password
-  const { error: pwErr } = await sb.auth.updateUser({ password: pass });
+  // Set password + mark has_password in metadata
+  const { error: pwErr } = await sb.auth.updateUser({
+    password: pass,
+    data: { full_name: name, phone, has_password: true }
+  });
   if (pwErr) {
     btn.textContent = 'Complete Setup'; btn.disabled = false;
     errBox.textContent = pwErr.message || 'Failed to set password.';
     errBox.style.display = 'block'; return;
   }
 
-  // Update user metadata + upsert profile
-  await sb.auth.updateUser({ data: { full_name: name } });
+  // Upsert profile with name + phone
   const { data: { user } } = await sb.auth.getUser();
   currentUser = user;
-  await upsertProfile({ ...currentUser, user_metadata: { ...currentUser.user_metadata, full_name: name } });
+  await sb.from('profiles').upsert({
+    id: currentUser.id,
+    email: currentUser.email,
+    full_name: name,
+    phone: phone,
+  }, { onConflict: 'id' });
 
   btn.textContent = 'Complete Setup'; btn.disabled = false;
   updateNavUI(true);

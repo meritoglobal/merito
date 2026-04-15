@@ -1173,7 +1173,7 @@ tbody tr.drag-over td:first-child{
     <div class="page-view" id="pv-course-category">
       <div class="page-header">
         <div class="page-title">Course Categories</div>
-        <div class="search-box"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><input placeholder="Search Course Categories" oninput="filterTable('cat-tbody',this.value,0)"></div>
+        <div class="search-box"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><input placeholder="Search Course Categories" oninput="filterTable('cat-tbody',this.value,0)" autocomplete="off"></div>
         <button class="btn-add" onclick="openModal('modal-add-cat')">+</button>
       </div>
       <div class="table-wrap">
@@ -1189,7 +1189,7 @@ tbody tr.drag-over td:first-child{
     <div class="page-view" id="pv-course">
       <div class="page-header">
         <div class="page-title">Course</div>
-        <div class="search-box"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><input placeholder="Search Course" oninput="filterTable('course-tbody',this.value,0)"></div>
+        <div class="search-box"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><input placeholder="Search Course" oninput="filterTable('course-tbody',this.value,0)" autocomplete="off"></div>
         <button class="btn-add" onclick="openAddCourse()">+</button>
       </div>
       <div class="table-wrap">
@@ -1327,7 +1327,7 @@ tbody tr.drag-over td:first-child{
         <div class="page-title">Users</div>
         <div class="search-box" style="max-width:280px;">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-          <input id="user-search-input" placeholder="Name, email or phone…" oninput="applyUserFilter()">
+          <input id="user-search-input" placeholder="Name, email or phone…" oninput="applyUserFilter()" autocomplete="new-password">
         </div>
       </div>
       <!-- Filter bar -->
@@ -2067,9 +2067,9 @@ tbody tr.drag-over td:first-child{
         <label class="form-label">Content Type</label>
         <div style="display:flex;gap:8px;flex-wrap:wrap;" id="cc-type-btns">
           <button class="cat-chip" onclick="setCCType('video',this)">🎬 Video</button>
-          <button class="cat-chip" onclick="setCCType('picture',this)">🖼️ Picture</button>
           <button class="cat-chip" onclick="setCCType('pdf',this)">📄 PDF</button>
           <button class="cat-chip" onclick="setCCType('link',this)">🔗 Link</button>
+          <button class="cat-chip" onclick="setCCType('mcq',this)">📝 MCQ Exam</button>
         </div>
       </div>
       <div class="form-group">
@@ -2484,8 +2484,9 @@ try {
   console.error('Supabase failed to initialize:', e);
 }
 
-function adminLogout() {
+async function adminLogout() {
   if (confirm('Are you sure you want to logout?')) {
+    await sb.auth.signOut();
     localStorage.removeItem('meritoAdminLoggedIn');
     document.getElementById('app').style.display = 'none';
     document.getElementById('login-screen').style.display = 'flex';
@@ -2498,6 +2499,13 @@ function adminLogout() {
 
 // Check if already logged in on page load
 window.addEventListener('DOMContentLoaded', () => {
+  // Disable browser autocomplete on all non-credential inputs
+  document.querySelectorAll('input[placeholder]').forEach(inp => {
+    if (!['email','password'].includes(inp.type)) {
+      inp.setAttribute('autocomplete', 'new-password');
+    }
+  });
+
   if (localStorage.getItem('meritoAdminLoggedIn') === 'yes') {
     document.getElementById('login-screen').style.display = 'none';
     document.getElementById('app').style.display = 'block';
@@ -2513,26 +2521,32 @@ window.addEventListener('DOMContentLoaded', () => {
   }
 });
 
-function adminLogin() {
+async function adminLogin() {
   const email = document.getElementById('adm-email').value.trim();
   const pass  = document.getElementById('adm-pass').value;
   const err   = document.getElementById('login-error');
+  const btn   = document.querySelector('.login-btn');
   err.style.display = 'none';
-  if (email === ADMIN_EMAIL && pass === ADMIN_PASS) {
-    localStorage.setItem('meritoAdminLoggedIn', 'yes');
-    document.getElementById('login-screen').style.display = 'none';
-    document.getElementById('app').style.display = 'block';
-    loadDashboard();
-    loadOrders();
-    loadCourses();
-    loadUsers();
-    loadCategories();
-    loadInstructors();
-    loadHomepageVideo();
-    loadNotifications();
-  } else {
-    err.style.display = 'block';
+
+  if (email !== ADMIN_EMAIL || pass !== ADMIN_PASS) {
+    err.style.display = 'block'; return;
   }
+
+  btn.textContent = 'Signing in…'; btn.disabled = true;
+  // Authenticate with Supabase so RLS policies allow full admin access
+  const { error } = await sb.auth.signInWithPassword({ email, password: pass });
+  btn.textContent = 'Sign In'; btn.disabled = false;
+
+  if (error) {
+    // Supabase auth failed — still allow admin via localStorage only (fallback)
+    console.warn('Supabase auth failed, using local auth:', error.message);
+  }
+
+  localStorage.setItem('meritoAdminLoggedIn', 'yes');
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  loadDashboard(); loadOrders(); loadCourses(); loadUsers();
+  loadCategories(); loadInstructors(); loadHomepageVideo(); loadNotifications();
 }
 
 // Allow Enter key on login
@@ -3327,13 +3341,23 @@ async function saveUserProfile() {
   const btn = document.querySelector('#modal-user-detail .modal-footer .btn-primary');
   btn.disabled = true; btn.textContent = 'Saving…';
 
-  const payload = { full_name, phone: phone||null, institution: institution||null, avatar_url: avatar_url||null };
+  const payload = { full_name, phone: phone||null, institution: institution||null };
   if (email) payload.email = email;
+  if (avatar_url) payload.avatar_url = avatar_url;
 
   const { error } = await sb.from('profiles').update(payload).eq('id', id);
   btn.disabled = false; btn.textContent = '💾 Save Profile';
 
-  if (error) { toast('Error: '+error.message,'error'); return; }
+  if (error) {
+    // If avatar_url column missing, retry without it
+    if (error.message && error.message.includes('avatar_url')) {
+      delete payload.avatar_url;
+      const { error: e2 } = await sb.from('profiles').update(payload).eq('id', id);
+      if (e2) { toast('Error: '+e2.message,'error'); return; }
+    } else {
+      toast('Error: '+error.message,'error'); return;
+    }
+  }
 
   // Update local cache
   const idx = allUsers.findIndex(u => u.id === id);
