@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>MeritoBD — Let's Crack It!</title>
+<title>Merito — Let's Crack It!</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -76,7 +76,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:15
   flex-shrink:0;
   text-decoration:none;
 }
-.nav-logo img{height:42px;width:148px;object-fit:contain;}
+.nav-logo img{height:56px;width:200px;object-fit:cover;object-position:center 52%;}
 .nav-logo-fallback{
   font-size:22px;font-weight:900;color:var(--text);letter-spacing:-0.02em;
 }
@@ -1302,6 +1302,7 @@ footer{
   .footer-grid{grid-template-columns:1fr 1fr;gap:28px;}
   .nav-search{display:none;}
   .detail-grid{grid-template-columns:1fr;padding:40px;}
+  .detail-sidebar{order:-1;}
   .cart-grid{grid-template-columns:1fr;}
   .profile-layout{grid-template-columns:1fr;padding:32px;}
   .blogs-grid{grid-template-columns:repeat(2,1fr);}
@@ -1330,6 +1331,7 @@ footer{
   body{padding-bottom:64px;}
   .detail-hero{padding:40px 20px;}
   .detail-grid{padding:20px;}
+  .detail-sidebar{order:-1;}
   .profile-layout{padding:20px;}
 }
 @media(max-width:480px){
@@ -1478,7 +1480,8 @@ footer{
 <!-- ═══ NAV ═══ -->
 <nav class="nav" id="main-nav" style="display:none;">
   <a class="nav-logo" onclick="go('home')">
-    <span class="nav-logo-fallback">Merito<em>BD</em></span>
+    <img src="Merito_whitelogo.png" alt="Merito" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+    <span class="nav-logo-fallback" style="display:none;">Merito</span>
   </a>
 
   <div class="nav-search">
@@ -1792,7 +1795,7 @@ footer{
   <div class="auth-wrap">
     <div class="auth-glow"></div>
     <div class="auth-logo-wrap">
-      <span style="font-size:26px;font-weight:900;color:var(--text);">Merito<em style="color:var(--text-acc);font-style:normal;">BD</em></span>
+      <img src="Merito_whitelogo.png" alt="Merito" style="height:72px;width:240px;object-fit:cover;object-position:center 52%;" onerror="this.style.display='none';this.insertAdjacentHTML('afterend','<span style=\'font-size:26px;font-weight:900;color:#fff;\'>Merito</span>')">
     </div>
     <div class="auth-title">Get Started</div>
     <div class="auth-sub">Enter your email to continue your learning journey</div>
@@ -1821,7 +1824,7 @@ footer{
   <div class="auth-wrap">
     <div class="auth-glow"></div>
     <div class="auth-logo-wrap">
-      <span style="font-size:26px;font-weight:900;color:var(--text);">Merito<em style="color:var(--text-acc);font-style:normal;">BD</em></span>
+      <img src="Merito_whitelogo.png" alt="Merito" style="height:72px;width:240px;object-fit:cover;object-position:center 52%;" onerror="this.style.display='none';this.insertAdjacentHTML('afterend','<span style=\'font-size:26px;font-weight:900;color:#fff;\'>Merito</span>')">
     </div>
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
       <button onclick="go('login')" style="background:none;border:none;color:var(--text-dim);cursor:pointer;padding:0;font-size:20px;line-height:1;">←</button>
@@ -1855,7 +1858,7 @@ footer{
   <div class="auth-wrap">
     <div class="auth-glow"></div>
     <div class="auth-logo-wrap">
-      <span style="font-size:26px;font-weight:900;color:var(--text);">Merito<em style="color:var(--text-acc);font-style:normal;">BD</em></span>
+      <img src="Merito_whitelogo.png" alt="Merito" style="height:72px;width:240px;object-fit:cover;object-position:center 52%;" onerror="this.style.display='none';this.insertAdjacentHTML('afterend','<span style=\'font-size:26px;font-weight:900;color:#fff;\'>Merito</span>')">
     </div>
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
       <button onclick="go('verify')" style="background:none;border:none;color:var(--text-dim);cursor:pointer;padding:0;font-size:20px;line-height:1;">←</button>
