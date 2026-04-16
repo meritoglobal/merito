@@ -1680,61 +1680,19 @@ function openCourse(id) {
       }
     }
 
-    // ── Render Curriculum ──
+    // ── Render Curriculum (from course_content table) ──
     const currEl = document.getElementById('dt-curriculum');
     if (currEl) {
-      const sects = c.curriculum || [];
-      let totalLessons = 0, totalSecs = sects.length;
-      sects.forEach(s => (s.subsections||[]).forEach(ss => { totalLessons += (ss.contents||[]).length; }));
-
       currEl.innerHTML = `<div class="det-section-hd">Course Curriculum
-        <span style="font-size:13px;color:var(--text-dim);font-weight:500;margin-left:auto;display:flex;gap:14px;">
-          <span>${totalSecs} section${totalSecs!==1?'s':''}</span>
-          <span>${totalLessons} lesson${totalLessons!==1?'s':''}</span>
-        </span>
-      </div>
-      ${sects.length ? `<div class="curb-outer">
-        ${sects.map((sec, si) => {
-          const secLessons = (sec.subsections||[]).reduce((a,ss)=>a+(ss.contents||[]).length,0);
-          return `<div class="curb-web-block open" id="cwb-${si}">
-            <div class="curb-web-sec-hd" onclick="toggleCurbSec(${si})">
-              <span class="curb-web-sec-title">${sec.title||'Untitled Section'}</span>
-              <span class="curb-web-sec-meta">
-                <span class="curb-sec-count">${secLessons} lesson${secLessons!==1?'s':''}</span>
-                <span class="curb-arrow">▼</span>
-              </span>
-            </div>
-            <div class="curb-web-sec-body">
-              ${(sec.subsections||[]).map((sub, subi) => {
-                const ctIcon = sub.contents?.[0]?.type === 'pdf' ? '📄' : sub.contents?.[0]?.type === 'quiz' ? '📝' : '▶';
-                return `<div class="curb-sub-block open" id="cwb-${si}-${subi}">
-                  <div class="curb-web-sub-hd" onclick="toggleCurbSub(${si},${subi})">
-                    <div class="curb-sub-icon">${ctIcon}</div>
-                    <span class="curb-sub-title">${sub.title||'Untitled Subsection'}</span>
-                    <span class="curb-sub-meta">${(sub.contents||[]).length} item${(sub.contents||[]).length!==1?'s':''}</span>
-                    <span class="curb-sub-arrow">▼</span>
-                  </div>
-                  <div class="curb-sub-body">
-                    ${(sub.contents||[]).map(ct => {
-                      const typeClass = ct.type==='pdf'?'type-pdf':ct.type==='quiz'?'type-quiz':'type-video';
-                      const typeEmoji = ct.type==='pdf'?'📄':ct.type==='quiz'?'📝':'▶';
-                      return `<div class="curb-content-item">
-                        <div class="curb-ct-icon ${typeClass}">${typeEmoji}</div>
-                        <span class="curb-ct-name">${ct.title||''}</span>
-                        ${ct.duration ? `<span class="curb-ct-dur">${ct.duration}</span>` : ''}
-                        ${ct.free
-                          ? `<span class="curb-ct-badge-free">FREE</span>`
-                          : `<span class="curb-ct-badge-lock">🔒</span>`}
-                      </div>`;
-                    }).join('')}
-                  </div>
-                </div>`;
-              }).join('')}
-            </div>
-          </div>`;
-        }).join('')}
-      </div>` : `<p style="color:var(--text-dim);font-size:14px;padding:8px 0;">Curriculum coming soon.</p>`}`;
+        <span style="font-size:13px;color:var(--text-dim);font-weight:500;margin-left:auto;">Loading…</span>
+      </div>`;
       currEl.style.display = 'block';
+      // Async fetch from course_content
+      sb.from('course_content').select('*').eq('course_id', c.id)
+        .order('sort_order', { ascending: true }).order('created_at', { ascending: true })
+        .then(({ data: rows }) => {
+          _renderCourseCurriculum(currEl, rows || []);
+        });
     }
 
     // ── Render Instructors ──
@@ -1775,6 +1733,88 @@ function openCourse(id) {
     _setupScrollSpy();
   }
   go('detail');
+}
+
+function _renderCourseCurriculum(currEl, rows) {
+  // Build section → subsection → items tree
+  const secMap = new Map(), secOrder = [];
+  rows.forEach(row => {
+    const sl  = row.section_label    || 'Lessons';
+    const sub = row.subsection_label || null;
+    if (!secMap.has(sl)) { secMap.set(sl, { subsMap: new Map(), subOrder: [], directItems: [] }); secOrder.push(sl); }
+    const sec = secMap.get(sl);
+    if (sub) {
+      if (!sec.subsMap.has(sub)) { sec.subsMap.set(sub, []); sec.subOrder.push(sub); }
+      sec.subsMap.get(sub).push(row);
+    } else {
+      sec.directItems.push(row);
+    }
+  });
+
+  const typeEmoji = { video:'▶', pdf:'📄', link:'🔗', picture:'🖼️' };
+
+  function _ctRow(item) {
+    const em = typeEmoji[item.content_type] || '▶';
+    return `<div class="curb-content-item">
+      <div class="curb-ct-icon">${em}</div>
+      <span class="curb-ct-name">${item.content_name || 'Untitled'}</span>
+      ${item.duration ? `<span class="curb-ct-dur">${item.duration}</span>` : ''}
+      ${item.is_free ? `<span class="curb-ct-badge-free">FREE</span>` : `<span class="curb-ct-badge-lock">🔒</span>`}
+    </div>`;
+  }
+
+  let totalLessons = rows.length;
+  let totalSecs = secOrder.length;
+
+  let html = `<div class="det-section-hd">Course Curriculum
+    <span style="font-size:13px;color:var(--text-dim);font-weight:500;margin-left:auto;display:flex;gap:14px;">
+      <span>${totalSecs} section${totalSecs!==1?'s':''}</span>
+      <span>${totalLessons} lesson${totalLessons!==1?'s':''}</span>
+    </span>
+  </div>`;
+
+  if (!rows.length) {
+    html += `<p style="color:var(--text-dim);font-size:14px;padding:8px 0;">Curriculum coming soon.</p>`;
+    currEl.innerHTML = html;
+    return;
+  }
+
+  html += `<div class="curb-outer">`;
+  secOrder.forEach((sl, si) => {
+    const sec = secMap.get(sl);
+    const secTotal = sec.directItems.length + sec.subOrder.reduce((a, sk) => a + sec.subsMap.get(sk).length, 0);
+    html += `<div class="curb-web-block open" id="cwb-${si}">
+      <div class="curb-web-sec-hd" onclick="toggleCurbSec(${si})">
+        <span class="curb-web-sec-title">${sl}</span>
+        <span class="curb-web-sec-meta">
+          <span class="curb-sec-count">${secTotal} lesson${secTotal!==1?'s':''}</span>
+          <span class="curb-arrow">▼</span>
+        </span>
+      </div>
+      <div class="curb-web-sec-body">`;
+    // Direct items under section (no subsection)
+    if (sec.directItems.length) {
+      html += sec.directItems.map(_ctRow).join('');
+    }
+    // Subsections
+    sec.subOrder.forEach((subLabel, subi) => {
+      const subItems = sec.subsMap.get(subLabel);
+      const firstType = subItems[0]?.content_type || 'video';
+      const subIcon = typeEmoji[firstType] || '▶';
+      html += `<div class="curb-sub-block open" id="cwb-${si}-${subi}">
+        <div class="curb-web-sub-hd" onclick="toggleCurbSub(${si},${subi})">
+          <div class="curb-sub-icon">${subIcon}</div>
+          <span class="curb-sub-title">${subLabel}</span>
+          <span class="curb-sub-meta">${subItems.length} item${subItems.length!==1?'s':''}</span>
+          <span class="curb-sub-arrow">▼</span>
+        </div>
+        <div class="curb-sub-body">${subItems.map(_ctRow).join('')}</div>
+      </div>`;
+    });
+    html += `</div></div>`;
+  });
+  html += `</div>`;
+  currEl.innerHTML = html;
 }
 
 function toggleCurbSec(idx) {
