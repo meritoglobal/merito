@@ -1411,42 +1411,59 @@ function _playCPItem(item) {
   document.getElementById('cp-item-type').textContent = meta.label;
   document.getElementById('cp-item-desc').textContent  = item.description || '';
 
-  // Render viewer
-  const viewer = document.getElementById('cp-viewer');
+  // Show the right panel area
+  const ytArea  = document.getElementById('cpv-yt-area');
+  const pdfArea = document.getElementById('cpv-pdf-area');
+  const viewer  = document.getElementById('cp-viewer');
+  if (ytArea)  ytArea.style.display  = 'none';
+  if (pdfArea) pdfArea.style.display = 'none';
+  if (viewer)  viewer.style.display  = 'none';
+
   if (itype === 'video') {
-    let embedSrc = '';
-    const ytMatch = iurl.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/))([A-Za-z0-9_-]{11})/);
-    if (ytMatch) {
-      embedSrc = 'https://www.youtube.com/embed/' + ytMatch[1] + '?autoplay=1&rel=0';
-    } else {
-      embedSrc = iurl;
+    const videoId = extractYouTubeId(iurl);
+    if (ytArea) ytArea.style.display = '';
+    if (videoId) {
+      _fpLoadYT().then(() => {
+        if (_cpYTPlayer && typeof _cpYTPlayer.loadVideoById === 'function') {
+          _cpYTPlayer.loadVideoById(videoId);
+        } else {
+          _cpYTPlayer = new YT.Player('cpv-ytplayer', {
+            videoId,
+            playerVars: { controls: 0, rel: 0, modestbranding: 1, playsinline: 1, enablejsapi: 1, origin: location.origin },
+            events: {
+              onReady(e) { e.target.playVideo(); _cpvStartProgress(); },
+              onStateChange: _cpvOnStateChange,
+            }
+          });
+        }
+      });
+    } else if (ytArea) {
+      // Non-YouTube video URL — fall back to iframe
+      ytArea.querySelector('#cpv-ytplayer').innerHTML = `<iframe src="${iurl}" allowfullscreen allow="autoplay" style="width:100%;height:100%;border:none;position:absolute;inset:0;"></iframe>`;
     }
-    viewer.innerHTML = embedSrc
-      ? `<iframe src="${embedSrc}" allowfullscreen allow="autoplay; encrypted-media" frameborder="0" style="position:absolute;top:0;left:0;width:100%;height:100%;border:none;"></iframe>`
-      : `<div class="cp-viewer-inner"><div class="cp-viewer-icon">🎬</div><div class="cp-viewer-label">No video URL</div></div>`;
 
   } else if (itype === 'pdf') {
-    viewer.innerHTML = iurl
-      ? `<div class="cp-pdf-wrap" style="position:absolute;top:0;left:0;width:100%;height:100%;"><iframe src="${iurl}" style="width:100%;height:100%;border:none;"></iframe></div>`
-      : `<div class="cp-viewer-inner"><div class="cp-viewer-icon">📄</div><div class="cp-viewer-label">No PDF URL provided</div></div>`;
+    if (pdfArea) {
+      pdfArea.style.display = '';
+      document.getElementById('cpv-pdf-iframe').src = iurl || '';
+    }
 
   } else if (itype === 'picture') {
+    if (viewer) viewer.style.display = '';
     viewer.innerHTML = iurl
       ? `<div class="cp-viewer-inner" style="background:#0a0214;"><img src="${iurl}" style="max-width:100%;max-height:100%;object-fit:contain;border-radius:8px;" alt="${iname}"></div>`
-      : `<div class="cp-viewer-inner"><div class="cp-viewer-icon">🖼</div><div class="cp-viewer-label">No image URL provided</div></div>`;
+      : `<div class="cp-viewer-inner"><div class="cp-viewer-icon">🖼</div><div class="cp-viewer-label">No image URL</div></div>`;
 
   } else if (itype === 'link') {
-    const url = iurl;
-    viewer.innerHTML = `
-      <div class="cp-viewer-inner">
-        <div>
-          <div class="cp-viewer-icon">🔗</div>
-          <div class="cp-viewer-label">${iname || 'External Resource'}</div>
-          <div class="cp-viewer-sub">${item.description || url}</div>
-          ${url ? `<a href="${url}" target="_blank" class="cp-viewer-btn">Open Link <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6M15 3h6v6M10 14L21 3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></a>` : ''}
-        </div>
-      </div>`;
+    if (viewer) viewer.style.display = '';
+    viewer.innerHTML = `<div class="cp-viewer-inner"><div>
+      <div class="cp-viewer-icon">🔗</div>
+      <div class="cp-viewer-label">${iname || 'External Resource'}</div>
+      <div class="cp-viewer-sub">${item.description || iurl}</div>
+      ${iurl ? `<a href="${iurl}" target="_blank" class="cp-viewer-btn">Open Link <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6M15 3h6v6M10 14L21 3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></a>` : ''}
+    </div></div>`;
   } else {
+    if (viewer) viewer.style.display = '';
     viewer.innerHTML = `<div class="cp-viewer-inner"><div class="cp-viewer-icon">📌</div><div class="cp-viewer-label">${iname}</div><div class="cp-viewer-sub">${item.description||''}</div></div>`;
   }
 }
@@ -1968,6 +1985,78 @@ function fpFullscreen() {
   if (!wrap) return;
   const el = wrap.querySelector('div') || wrap;
   (el.requestFullscreen || el.webkitRequestFullscreen || el.mozRequestFullScreen || (()=>{})).call(el);
+}
+
+/* ══════════════════════════════════════════════
+   COURSE PLAYER — Custom Video Controls (cpv*)
+══════════════════════════════════════════════ */
+let _cpYTPlayer = null;
+let _cpvProgressInterval = null;
+let _cpvMuted = false;
+
+function _cpvStartProgress() {
+  clearInterval(_cpvProgressInterval);
+  _cpvProgressInterval = setInterval(() => {
+    if (!_cpYTPlayer || typeof _cpYTPlayer.getDuration !== 'function') return;
+    const cur = _cpYTPlayer.getCurrentTime() || 0;
+    const dur = _cpYTPlayer.getDuration()    || 0;
+    const pct = dur > 0 ? (cur / dur * 100) : 0;
+    const fill    = document.getElementById('cpv-progress-fill');
+    const timeCur = document.getElementById('cpv-time-cur');
+    const timeDur = document.getElementById('cpv-time-dur');
+    if (fill)    fill.style.width = pct + '%';
+    if (timeCur) timeCur.textContent = _fpFmt(cur);
+    if (timeDur) timeDur.textContent = _fpFmt(dur);
+  }, 400);
+}
+
+function _cpvOnStateChange(e) {
+  const btn = document.getElementById('cpv-play-btn');
+  if (!btn) return;
+  if (e.data === 1) { // PLAYING
+    btn.innerHTML = '<svg width="14" height="16" viewBox="0 0 14 16" fill="black"><rect x="0" y="0" width="4.5" height="16" rx="1"/><rect x="9.5" y="0" width="4.5" height="16" rx="1"/></svg>';
+    _cpvStartProgress();
+  } else {
+    btn.innerHTML = '<svg width="16" height="18" viewBox="0 0 16 18" fill="black"><path d="M1 1l14 8L1 17V1z"/></svg>';
+  }
+}
+
+function cpvTogglePlay() {
+  if (!_cpYTPlayer) return;
+  _cpYTPlayer.getPlayerState() === 1 ? _cpYTPlayer.pauseVideo() : _cpYTPlayer.playVideo();
+}
+
+function cpvSkip(secs) {
+  if (!_cpYTPlayer || typeof _cpYTPlayer.getCurrentTime !== 'function') return;
+  _cpYTPlayer.seekTo(Math.max(0, _cpYTPlayer.getCurrentTime() + secs), true);
+}
+
+function cpvSeek(event) {
+  if (!_cpYTPlayer || typeof _cpYTPlayer.getDuration !== 'function') return;
+  const bar = document.getElementById('cpv-progress-bar');
+  if (!bar) return;
+  const rect = bar.getBoundingClientRect();
+  const pct  = Math.max(0, Math.min(1, (event.clientX - rect.left) / rect.width));
+  _cpYTPlayer.seekTo(_cpYTPlayer.getDuration() * pct, true);
+}
+
+function cpvSetSpeed(rate) {
+  if (_cpYTPlayer && typeof _cpYTPlayer.setPlaybackRate === 'function') {
+    _cpYTPlayer.setPlaybackRate(parseFloat(rate));
+  }
+}
+
+function cpvToggleMute() {
+  if (!_cpYTPlayer) return;
+  const btn = document.getElementById('cpv-vol-btn');
+  if (_cpvMuted) { _cpYTPlayer.unMute(); _cpvMuted = false; if (btn) btn.textContent = '🔊'; }
+  else           { _cpYTPlayer.mute();   _cpvMuted = true;  if (btn) btn.textContent = '🔇'; }
+}
+
+function cpvFullscreen() {
+  const area = document.getElementById('cpv-yt-area');
+  if (!area) return;
+  (area.requestFullscreen || area.webkitRequestFullscreen || area.mozRequestFullScreen || (()=>{})).call(area);
 }
 function toggleCurbSub(secIdx, subIdx) {
   const el = document.getElementById(`cwb-${secIdx}-${subIdx}`);

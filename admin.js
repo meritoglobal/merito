@@ -2496,13 +2496,33 @@ function ccSetSecLabel(lid,v)         { const s=_ccGetSec(lid); if(s) s.label=v;
 function ccSetSubLabel(sLid,subLid,v) { const s=_ccGetSub(sLid,subLid); if(s) s.label=v; }
 function ccSetItemField(lid,field,v)  { const i=_ccGetItem(lid); if(i) i[field]=v; }
 
+/* — PDF URL area (upload zone for PDF, plain input otherwise) — */
+function _ccUrlArea(item) {
+  if (item.content_type === 'pdf') {
+    const label = item.content_url ? '✅ PDF saved — drop/click to replace' : '📄 Drop PDF or click to upload';
+    return `<div onclick="document.getElementById('pdffile-${item._lid}').click()"
+      ondragover="event.preventDefault();this.style.borderColor='var(--primary)'"
+      ondragleave="this.style.borderColor='rgba(74,0,177,0.3)'"
+      ondrop="ccHandlePdfDrop(event,'${item._lid}')"
+      style="flex:2;min-width:180px;border:2px dashed rgba(74,0,177,0.3);border-radius:8px;padding:7px 12px;text-align:center;cursor:pointer;font-size:12px;color:var(--text-dim);">
+      <input type="file" id="pdffile-${item._lid}" accept="application/pdf,.pdf" style="display:none" onchange="ccHandlePdfFile(event,'${item._lid}')">
+      <span id="pdfstatus-${item._lid}">${label}</span>
+    </div>`;
+  }
+  return `<input value="${_ccEsc(item.content_url)}" oninput="ccSetItemField('${item._lid}','content_url',this.value)" placeholder="YouTube / any URL" style="flex:2;min-width:180px;border:1px solid var(--border);border-radius:6px;padding:5px 8px;font-size:12px;background:var(--bg);color:var(--text);">`;
+}
+
 /* — Type chip click (partial DOM update, no full re-render) — */
 function ccSetItemType(lid, type, el) {
   const item = _ccGetItem(lid);
   if (!item) return;
   item.content_type = type;
-  const chipsWrap = el.closest('[data-chips-wrap]');
+  const row = el.closest('.cc-item-row');
+  if (!row) return;
+  const chipsWrap = row.querySelector('[data-chips-wrap]');
   if (chipsWrap) chipsWrap.innerHTML = _ccTypeChips(lid, type);
+  const urlWrap = row.querySelector('[data-url-area]');
+  if (urlWrap) urlWrap.innerHTML = _ccUrlArea(item);
 }
 function _ccTypeChips(lid, activeType) {
   return Object.keys(_ccTypeIcons).map(t=>`<span onclick="ccSetItemType('${lid}','${t}',this)" style="cursor:pointer;font-size:11px;padding:3px 9px;border-radius:12px;font-weight:600;transition:background .15s,color .15s;background:${activeType===t?'var(--primary)':'rgba(74,0,177,0.08)'};color:${activeType===t?'#fff':'var(--primary)'};">${_ccTypeIcons[t]} ${_ccTypeLabels[t]}</span>`).join('');
@@ -2540,14 +2560,40 @@ function ccDeleteItem(lid,sLid,subLid) {
 /* — Renderers — */
 function _ccItemRow(item, sLid, subLid) {
   const sl = subLid||'';
-  return `<div class="cc-item-row" data-lid="${item._lid}" style="display:flex;flex-wrap:wrap;align-items:center;gap:6px;background:var(--card);border:1px solid rgba(74,0,177,0.1);border-radius:8px;padding:8px 10px;">
+  return `<div class="cc-item-row" data-lid="${item._lid}" data-seclid="${sLid}" data-sublid="${sl}" style="display:flex;flex-wrap:wrap;align-items:center;gap:6px;background:var(--card);border:1px solid rgba(74,0,177,0.1);border-radius:8px;padding:8px 10px;">
     <div data-chips-wrap style="display:flex;gap:4px;flex-wrap:wrap;">${_ccTypeChips(item._lid,item.content_type)}</div>
     <input value="${_ccEsc(item.content_name)}" oninput="ccSetItemField('${item._lid}','content_name',this.value)" placeholder="Lesson name" style="flex:1;min-width:120px;border:1px solid var(--border);border-radius:6px;padding:5px 8px;font-size:13px;background:var(--bg);color:var(--text);">
-    <input value="${_ccEsc(item.content_url)}" oninput="ccSetItemField('${item._lid}','content_url',this.value)" placeholder="YouTube / PDF / any URL" style="flex:2;min-width:180px;border:1px solid var(--border);border-radius:6px;padding:5px 8px;font-size:12px;background:var(--bg);color:var(--text);">
+    <div data-url-area style="display:contents;">${_ccUrlArea(item)}</div>
     <input value="${_ccEsc(item.duration)}" oninput="ccSetItemField('${item._lid}','duration',this.value)" placeholder="30:00" title="Duration" style="width:66px;border:1px solid var(--border);border-radius:6px;padding:5px 8px;font-size:12px;background:var(--bg);color:var(--text);">
     <label style="display:flex;align-items:center;gap:4px;font-size:12px;color:var(--text-mid);cursor:pointer;white-space:nowrap;"><input type="checkbox" ${item.is_free?'checked':''} onchange="ccSetItemField('${item._lid}','is_free',this.checked)" style="width:14px;height:14px;accent-color:var(--primary);"> Free</label>
     <button onclick="ccDeleteItem('${item._lid}','${sLid}','${sl}')" style="background:none;border:none;cursor:pointer;font-size:18px;color:#c03030;line-height:1;padding:0 2px;flex-shrink:0;" title="Remove">×</button>
   </div>`;
+}
+
+/* — PDF Upload — */
+async function _ccUploadPdf(lid, file) {
+  const setStatus = (t) => { const el=document.getElementById('pdfstatus-'+lid); if(el) el.textContent=t; };
+  setStatus('⏳ Uploading…');
+  const safe = file.name.replace(/[^a-z0-9._-]/gi,'_').toLowerCase();
+  const path = `cc/${Date.now()}_${safe}`;
+  const { error } = await sb.storage.from('course-pdfs').upload(path, file, { cacheControl:'3600', upsert:false });
+  if (error) { setStatus('❌ '+error.message); toast('Upload failed: '+error.message,'error'); return; }
+  const { data: urlData } = sb.storage.from('course-pdfs').getPublicUrl(path);
+  const url = urlData.publicUrl;
+  const item = _ccGetItem(lid); if (item) item.content_url = url;
+  setStatus('✅ '+file.name);
+  toast('PDF uploaded!','success');
+}
+async function ccHandlePdfDrop(event, lid) {
+  event.preventDefault();
+  event.currentTarget.style.borderColor = 'rgba(74,0,177,0.3)';
+  const file = event.dataTransfer?.files?.[0];
+  if (!file || !file.type.includes('pdf')) { toast('Please drop a PDF file','error'); return; }
+  await _ccUploadPdf(lid, file);
+}
+async function ccHandlePdfFile(event, lid) {
+  const file = event.target?.files?.[0]; if (!file) return;
+  await _ccUploadPdf(lid, file);
 }
 function _ccSubBlock(sLid, sub) {
   return `<div class="cc-sub-block" style="border:1px solid rgba(74,0,177,0.15);border-radius:8px;overflow:hidden;background:var(--bg);">
