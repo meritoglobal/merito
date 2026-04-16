@@ -1313,11 +1313,13 @@ tbody tr.drag-over td:first-child{
       <div class="page-header" style="flex-wrap:wrap;gap:10px;">
         <div class="page-title" style="width:100%;">Manage Orders</div>
         <input class="form-input" style="max-width:200px;" placeholder="Search Orders" oninput="filterOrders(this.value)">
-        <select class="form-select" style="max-width:180px;" onchange="filterOrderStatus(this.value)">
-          <option value="">Select Status</option>
-          <option value="pending">Pending</option>
-          <option value="verified">Complete</option>
-          <option value="rejected">Rejected</option>
+        <select class="form-select" style="max-width:190px;" onchange="filterOrderStatus(this.value)">
+          <option value="">All Statuses</option>
+          <option value="cart">🛒 Cart Item</option>
+          <option value="almost_bought">⏳ Almost Bought</option>
+          <option value="pending">📬 Pending</option>
+          <option value="verified">✅ Complete</option>
+          <option value="rejected">❌ Rejected</option>
         </select>
       </div>
       <div class="table-wrap">
@@ -1694,6 +1696,22 @@ tbody tr.drag-over td:first-child{
         </div>
       </div>
 
+      <!-- ── Payment Settings ── -->
+      <div class="ss-section">
+        <div class="ss-section-head" onclick="toggleSS('ss-payment-sec')">
+          <div class="ss-section-title">💳 Payment Settings — bKash, Nagad &amp; Bank Transfer details</div>
+          <span class="ss-section-toggle" id="ss-payment-sec-arrow">▾</span>
+        </div>
+        <div id="ss-payment-sec" style="display:block;">
+          <div class="ss-section-body single-col">
+            <div class="ss-field"><label>bKash Merchant Number</label><input id="ss-bkash_number" placeholder="01XXXXXXXXX"></div>
+            <div class="ss-field"><label>Nagad Merchant Number</label><input id="ss-nagad_number" placeholder="01XXXXXXXXX"></div>
+            <div class="ss-field"><label>Bank Transfer Details (one detail per line, e.g. Bank: Name, Account: XXXX, Branch: Location)</label><textarea id="ss-bank_details" rows="5" style="width:100%;font-family:monospace;font-size:13px;padding:10px;background:var(--bg);color:var(--text);border:1px solid var(--border-sub);border-radius:6px;" placeholder="Bank: Dutch-Bangla Bank&#10;Account Name: Merito Global&#10;Account No: XXXX-XXXX-XXXX&#10;Branch: Dhaka Main&#10;Routing: 090261111"></textarea></div>
+          </div>
+          <div class="ss-save-row"><button class="btn-primary" onclick="saveSSection('payment-sec',['bkash_number','nagad_number','bank_details'])">💾 Save Payment Settings</button></div>
+        </div>
+      </div>
+
     </div>
 
   </div><!-- /content -->
@@ -1729,9 +1747,9 @@ tbody tr.drag-over td:first-child{
         </div>
       </div>
     </div>
-    <div class="modal-footer">
-      <button class="btn-green" onclick="updateOrderStatus('verified')">✓ Mark Complete</button>
-      <button class="btn-danger" onclick="updateOrderStatus('rejected')">✗ Reject</button>
+    <div class="modal-footer" id="od-footer">
+      <button class="btn-green" id="od-btn-complete" onclick="updateOrderStatus('verified')">✓ Mark Complete</button>
+      <button class="btn-danger" id="od-btn-reject" onclick="updateOrderStatus('rejected')">✗ Reject</button>
       <button class="btn-secondary" onclick="closeModal('modal-order')">Close</button>
     </div>
   </div>
@@ -2750,7 +2768,8 @@ const SS_KEYS = [
   'testi2_name','testi2_result','testi2_text',
   'testi3_name','testi3_result','testi3_text',
   'app_label','app_downloads','app_heading','app_sub',
-  'footer_tagline','footer_addr1','footer_addr2','footer_addr3','footer_email','footer_copyright'
+  'footer_tagline','footer_addr1','footer_addr2','footer_addr3','footer_email','footer_copyright',
+  'bkash_number','nagad_number','bank_details'
 ];
 
 async function loadSiteSettings() {
@@ -2848,10 +2867,12 @@ async function loadDashboard() {
     const thisYear  = o => new Date(o.created_at).getFullYear() === now.getFullYear();
     const complete  = orders.filter(o => o.status === 'verified');
     const pending   = orders.filter(o => o.status === 'pending');
+    const almostBought = orders.filter(o => o.status === 'almost_bought');
+    const cartItems    = orders.filter(o => o.status === 'cart');
     document.getElementById('d-orders-month').textContent = complete.filter(thisMonth).length;
     document.getElementById('d-orders-year').textContent  = complete.filter(thisYear).length;
-    document.getElementById('d-pending-month').textContent = pending.filter(thisMonth).length;
-    document.getElementById('d-pending-year').textContent  = pending.filter(thisYear).length;
+    document.getElementById('d-pending-month').textContent = (pending.length + almostBought.length + cartItems.length);
+    document.getElementById('d-pending-year').textContent  = (pending.filter(thisYear).length + almostBought.filter(thisYear).length);
     document.getElementById('pending-count').textContent   = pending.length;
     const totalSales = complete.reduce((s,o) => s + Number(o.amount), 0);
     const yearSales  = complete.filter(thisYear).reduce((s,o) => s + Number(o.amount), 0);
@@ -3203,6 +3224,18 @@ async function loadOrders() {
   }
 }
 
+function _orderStatusBadge(status) {
+  const map = {
+    cart:          { label:'🛒 Cart Item',     bg:'#e3f2fd', color:'#1565c0' },
+    almost_bought: { label:'⏳ Almost Bought',  bg:'#fff8e1', color:'#e65100' },
+    pending:       { label:'📬 Pending',        bg:'#fff3e0', color:'#bf360c' },
+    verified:      { label:'✅ Complete',       bg:'#e8f5e9', color:'#1b5e20' },
+    rejected:      { label:'❌ Rejected',       bg:'#fce4ec', color:'#880e4f' },
+  };
+  const s = map[status] || { label: status, bg:'#f5f5f5', color:'#555' };
+  return `<span style="display:inline-block;padding:3px 10px;border-radius:20px;background:${s.bg};color:${s.color};font-size:11px;font-weight:700;white-space:nowrap;">${s.label}</span>`;
+}
+
 function renderOrders(data) {
   const tbody = document.getElementById('order-tbody');
   if (!tbody) return;
@@ -3214,7 +3247,7 @@ function renderOrders(data) {
       <td>${o.courses?.title || '—'}</td>
       <td>৳${Number(o.amount).toLocaleString()}</td>
       <td>0</td>
-      <td><span class="${o.status==='verified'?'status-complete':o.status==='rejected'?'status-complete':'status-pending'}">${o.status==='verified'?'complete':o.status}</span></td>
+      <td>${_orderStatusBadge(o.status)}</td>
       <td><button class="btn-icon btn-view" onclick="viewOrder('${o.id}')">👁</button></td>
     </tr>`).join('') || '<tr><td colspan="8" style="text-align:center;padding:40px;color:var(--text-dim)">No orders yet.</td></tr>';
   document.getElementById('order-count').textContent = `1-${data.length} of ${data.length}`;
@@ -3230,9 +3263,13 @@ function viewOrder(id) {
   document.getElementById('od-id').textContent     = o.id;
   document.getElementById('od-date').textContent   = new Date(o.created_at).toLocaleString();
   document.getElementById('od-item').textContent   = o.courses?.title || '—';
-  document.getElementById('od-status').textContent = o.status;
+  document.getElementById('od-status').innerHTML = _orderStatusBadge(o.status);
   document.getElementById('od-amount').textContent = '৳' + Number(o.amount).toLocaleString();
   document.getElementById('od-txn').textContent    = o.transaction_id || '—';
+  // Only show Complete/Reject buttons for pending orders
+  const isPending = o.status === 'pending';
+  document.getElementById('od-btn-complete').style.display = isPending ? '' : 'none';
+  document.getElementById('od-btn-reject').style.display   = isPending ? '' : 'none';
   openModal('modal-order');
 }
 

@@ -2280,7 +2280,7 @@ footer{
         </div>
         <div class="summary-row total"><span>Total</span><span>৳4,500</span></div>
         <!-- Confirm btn: h=68 rx=8 fill=#04B852 -->
-        <button class="btn-confirm" onclick="go('payment')">
+        <button class="btn-confirm" onclick="proceedToPayment()">
           <svg width="20" height="20" fill="none" viewBox="0 0 24 24"><path d="M9 12l2 2 4-4" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="12" r="10" stroke="#fff" stroke-width="2"/></svg>
           Proceed to Payment
         </button>
@@ -2314,10 +2314,8 @@ footer{
         <span>Bank Transfer</span>
         <div class="pm-radio"></div>
       </div>
-      <div id="pm-info" style="background:var(--bg);border:1px solid rgba(74,0,177,0.22);border-radius:8px;padding:16px;margin-top:12px;">
-        <p style="font-size:13px;color:var(--text-mid);margin-bottom:8px;">Send <strong style="color:var(--text);">৳4,500</strong> to bKash Merchant:</p>
-        <p style="font-size:16px;font-weight:800;color:var(--text-acc);">01XXXXXXXXX</p>
-        <input id="txn-id" class="pm-number" placeholder="Enter Transaction ID">
+      <div id="pm-info" style="background:var(--bg);border:1px solid rgba(74,0,177,0.22);border-radius:8px;padding:20px;margin-top:12px;min-height:90px;">
+        <!-- populated by _renderPayInfo() when page opens -->
       </div>
       <button class="btn-confirm" style="margin-top:14px;" onclick="handlePaymentConfirm()">Confirm Payment</button>
       <p style="font-size:12px;color:var(--text-dim);text-align:center;margin-top:10px;">Enrollment within 2 hours of payment confirmation</p>
@@ -2496,9 +2494,11 @@ let currentUser = null;
 let COURSES = [];
 let ALL_CATEGORIES = []; // all categories including admin-added ones with no courses yet
 let ALL_INSTRUCTORS = []; // all instructors loaded from DB
-let activeCart = []; // [{courseId, title, price, icon}]
+let activeCart = []; // [{courseId, title, price, icon, orderId}]
 let currentCourseId = null;
 let activePaymentMethod = 'bkash';
+let _pendingCourseId = null; // course to open after login completes
+let _paySettings = { bkash_number:'01XXXXXXXXX', nagad_number:'01XXXXXXXXX', bank_details:'Bank: Dutch-Bangla Bank\nAccount: XXXX-XXXX-XXXX\nBranch: Dhaka Main' };
 
 /* ── On page load ── */
 window.addEventListener('DOMContentLoaded', async () => {
@@ -2602,6 +2602,14 @@ async function loadSiteText() {
     const emailEl = document.getElementById('st-footer_email');
     if (emailEl) { emailEl.textContent = map.footer_email; emailEl.href = 'mailto:'+map.footer_email; }
   }
+
+  // Payment settings
+  if (map.bkash_number)  _paySettings.bkash_number  = map.bkash_number;
+  if (map.nagad_number)  _paySettings.nagad_number  = map.nagad_number;
+  if (map.bank_details)  _paySettings.bank_details  = map.bank_details;
+  // Re-render current payment info if payment page is open
+  const info = document.getElementById('pm-info');
+  if (info) _renderPayInfo(activePaymentMethod);
 }
 
 function extractYTId(url) {
@@ -2630,7 +2638,7 @@ sb.auth.onAuthStateChange(async (event, session) => {
     loadNotifications();
     const complete = await checkProfileComplete(currentUser);
     if (!complete) { showProfileSetup(currentUser); return; }
-    go('home');
+    _redirectAfterLogin();
 
   } else if (event === 'TOKEN_REFRESHED') {
     currentUser = session.user;
@@ -3077,7 +3085,7 @@ async function handleVerifyOTP() {
     showProfileSetup(currentUser);
     setTimeout(() => { const n = document.getElementById('reg-name'); if(n) n.focus(); }, 200);
   } else {
-    go('home');
+    _redirectAfterLogin();
     toast('Welcome back!', 'success');
   }
 }
@@ -3147,7 +3155,7 @@ async function handleProfileSetup() {
 
   btn.textContent = 'Complete Setup'; btn.disabled = false;
   updateNavUI(true);
-  go('home');
+  _redirectAfterLogin();
   toast('Welcome to Merito!', 'success');
 }
 
@@ -3317,7 +3325,7 @@ async function handleFPSetPassword() {
       showProfileSetup(currentUser); return;
     }
   }
-  go('home');
+  _redirectAfterLogin();
   toast('Password updated! Welcome back.', 'success');
 }
 
@@ -3387,16 +3395,56 @@ async function handleLogout() {
 }
 
 /* ══════════════════════════════════════════════
+   REDIRECT AFTER LOGIN
+══════════════════════════════════════════════ */
+function _redirectAfterLogin() {
+  if (_pendingCourseId) {
+    const id = _pendingCourseId;
+    _pendingCourseId = null;
+    // Open the course they were trying to buy
+    if (COURSES.length) { openCourse(id); go('course-detail'); }
+    else { go('home'); }
+  } else {
+    go('home');
+  }
+}
+
+/* ══════════════════════════════════════════════
    CART — Add course to cart
 ══════════════════════════════════════════════ */
-function addToCartAndGo(courseId) {
-  if (!currentUser) { go('login'); return; }
+async function addToCartAndGo(courseId) {
+  if (!currentUser) {
+    _pendingCourseId = courseId; // remember which course they wanted
+    go('login'); return;
+  }
   const c = COURSES.find(x => x.id === courseId);
   if (!c) return;
   const already = activeCart.find(x => x.courseId === courseId);
-  if (!already) activeCart.push({ courseId: c.id, title: c.title, price: c.price, icon: c.icon });
+  if (!already) {
+    // Save to DB as 'cart' status so admin can track abandoned carts
+    let orderId = null;
+    try {
+      const { data: newOrder } = await sb.from('orders').insert({
+        user_id: currentUser.id, course_id: c.id, amount: c.price,
+        payment_method: 'pending', status: 'cart',
+        order_ref: 'CART-' + Date.now()
+      }).select('id').single();
+      orderId = newOrder?.id || null;
+    } catch(e) { /* non-critical */ }
+    activeCart.push({ courseId: c.id, title: c.title, price: c.price, icon: c.icon, orderId });
+  }
   renderCart();
   go('cart');
+}
+
+/* ─ Called when user clicks Proceed to Payment ─ */
+async function proceedToPayment() {
+  // Mark all cart items as 'almost_bought'
+  const ids = activeCart.map(i => i.orderId).filter(Boolean);
+  if (ids.length) {
+    try { await sb.from('orders').update({ status: 'almost_bought' }).in('id', ids); } catch(e) {}
+  }
+  go('payment');
 }
 
 function renderCart() {
@@ -3449,17 +3497,29 @@ async function handlePaymentConfirm() {
   btn.textContent = 'Submitting…'; btn.disabled = true;
 
   const orderRef = 'MBD-' + Date.now();
-  const orders = activeCart.map(item => ({
-    user_id: currentUser.id,
-    course_id: item.courseId,
-    amount: item.price,
-    payment_method: activePaymentMethod,
-    transaction_id: txnId,
-    status: 'pending',
-    order_ref: orderRef
-  }));
 
-  const { error } = await sb.from('orders').insert(orders);
+  // Try to update existing tracked order IDs first (cart → pending)
+  const trackedIds = activeCart.map(i => i.orderId).filter(Boolean);
+  let error;
+  if (trackedIds.length === activeCart.length && trackedIds.length > 0) {
+    // All items have DB order IDs — update them
+    const res = await sb.from('orders').update({
+      payment_method: activePaymentMethod,
+      transaction_id: txnId,
+      status: 'pending',
+      order_ref: orderRef
+    }).in('id', trackedIds);
+    error = res.error;
+  } else {
+    // Fallback: insert new rows (e.g. user refreshed and lost cart state)
+    const rows = activeCart.map(item => ({
+      user_id: currentUser.id, course_id: item.courseId, amount: item.price,
+      payment_method: activePaymentMethod, transaction_id: txnId,
+      status: 'pending', order_ref: orderRef
+    }));
+    const res = await sb.from('orders').insert(rows);
+    error = res.error;
+  }
 
   btn.textContent = 'Confirm Payment'; btn.disabled = false;
 
@@ -3827,6 +3887,7 @@ function go(page) {
   if (page === 'profile') loadProfileData();
   if (page === 'order-track') loadOrderHistory();
   if (page === 'cart') renderCart();
+  if (page === 'payment') _renderPayInfo(activePaymentMethod);
   if (page === 'login') {
     // Always reset to email step
     document.getElementById('login-step-email').style.display = 'block';
@@ -4206,13 +4267,33 @@ function selPM(el, method) {
   const r = el.querySelector('.pm-radio');
   if (r) r.classList.add('checked');
 
-  const info = document.getElementById('pm-info');
-  const total = activeCart.reduce((s, i) => s + i.price, 0);
-  const amt = '৳' + total.toLocaleString();
+  _renderPayInfo(method);
+}
 
-  if (method==='bkash')  info.innerHTML = `<p style="font-size:13px;color:var(--text-mid);margin-bottom:8px;">Send <strong style="color:var(--text);">${amt}</strong> to bKash Merchant:</p><p style="font-size:16px;font-weight:800;color:var(--text-acc);">01XXXXXXXXX</p><input id="txn-id" class="pm-number" placeholder="Enter bKash Transaction ID">`;
-  if (method==='nagad')  info.innerHTML = `<p style="font-size:13px;color:var(--text-mid);margin-bottom:8px;">Send <strong style="color:var(--text);">${amt}</strong> to Nagad Merchant:</p><p style="font-size:16px;font-weight:800;color:var(--text-acc);">01XXXXXXXXX</p><input id="txn-id" class="pm-number" placeholder="Enter Nagad Transaction ID">`;
-  if (method==='bank')   info.innerHTML = `<p style="font-size:13px;color:var(--text-mid);margin-bottom:8px;">Transfer <strong style="color:var(--text);">${amt}</strong> to:</p><p style="font-size:14px;color:var(--text);line-height:1.8;">Bank: Dutch-Bangla Bank<br>Account: XXXX-XXXX-XXXX<br>Branch: Dhaka Main</p><input id="txn-id" class="pm-number" placeholder="Enter Reference Number">`;
+function _renderPayInfo(method, amt) {
+  const info = document.getElementById('pm-info');
+  if (!info) return;
+  if (!amt) {
+    const total = activeCart.reduce((s, i) => s + i.price, 0);
+    amt = '৳' + total.toLocaleString();
+  }
+  if (method==='bkash') {
+    info.innerHTML = `
+      <p style="font-size:13px;color:var(--text-mid);margin-bottom:6px;">Send <strong style="color:var(--text);">${amt}</strong> to bKash Merchant:</p>
+      <p style="font-size:20px;font-weight:900;color:var(--text-acc);letter-spacing:.04em;margin-bottom:14px;">${_paySettings.bkash_number}</p>
+      <input id="txn-id" class="pm-number" placeholder="Enter bKash Transaction ID">`;
+  } else if (method==='nagad') {
+    info.innerHTML = `
+      <p style="font-size:13px;color:var(--text-mid);margin-bottom:6px;">Send <strong style="color:var(--text);">${amt}</strong> to Nagad Merchant:</p>
+      <p style="font-size:20px;font-weight:900;color:var(--text-acc);letter-spacing:.04em;margin-bottom:14px;">${_paySettings.nagad_number}</p>
+      <input id="txn-id" class="pm-number" placeholder="Enter Nagad Transaction ID">`;
+  } else if (method==='bank') {
+    const lines = (_paySettings.bank_details||'').split('\n').join('<br>');
+    info.innerHTML = `
+      <p style="font-size:13px;color:var(--text-mid);margin-bottom:6px;">Transfer <strong style="color:var(--text);">${amt}</strong> to:</p>
+      <p style="font-size:14px;color:var(--text);line-height:2;margin-bottom:14px;">${lines}</p>
+      <input id="txn-id" class="pm-number" placeholder="Enter Reference Number">`;
+  }
 }
 
 /* ── Profile tabs ── */
