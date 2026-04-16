@@ -1761,10 +1761,13 @@ tbody tr.drag-over td:first-child{
           <div class="order-detail-row"><strong>Txn ID: </strong><span id="od-txn">—</span></div>
         </div>
       </div>
+      <!-- Enrollment status banner -->
+      <div id="od-enr-status" style="margin-top:16px;padding:12px 16px;border-radius:8px;font-size:13px;display:none;"></div>
     </div>
     <div class="modal-footer" id="od-footer">
-      <button class="btn-green" id="od-btn-complete" onclick="updateOrderStatus('verified')">✓ Mark Complete</button>
+      <button class="btn-green" id="od-btn-complete" onclick="updateOrderStatus('verified')">✓ Mark Complete & Enroll</button>
       <button class="btn-danger" id="od-btn-reject" onclick="updateOrderStatus('rejected')">✗ Reject</button>
+      <button class="btn-green" id="od-btn-reenroll" onclick="reEnrollStudent()" style="display:none;background:#1565c0;">🔁 Re-enroll Student</button>
       <button class="btn-secondary" onclick="closeModal('modal-order')">Close</button>
     </div>
   </div>
@@ -3268,24 +3271,45 @@ function renderOrders(data) {
   document.getElementById('order-count').textContent = `1-${data.length} of ${data.length}`;
 }
 
-function viewOrder(id) {
+async function viewOrder(id) {
   const o = allOrders.find(x => String(x.id) === String(id));
   if (!o) return;
   currentOrderId = o.id;
   document.getElementById('od-name').textContent   = o.profiles?.full_name || '—';
-  document.getElementById('od-email').textContent  = o.user_id || '—';
+  document.getElementById('od-email').textContent  = o.profiles?.email || o.user_id || '—';
   document.getElementById('od-phone').textContent  = o.profiles?.phone || '—';
   document.getElementById('od-id').textContent     = o.id;
   document.getElementById('od-date').textContent   = new Date(o.created_at).toLocaleString();
   document.getElementById('od-item').textContent   = o.courses?.title || '—';
-  document.getElementById('od-status').innerHTML = _orderStatusBadge(o.status);
+  document.getElementById('od-status').innerHTML   = _orderStatusBadge(o.status);
   document.getElementById('od-amount').textContent = '৳' + Number(o.amount).toLocaleString();
   document.getElementById('od-txn').textContent    = o.transaction_id || '—';
-  // Only show Complete/Reject buttons for pending orders
-  const isPending = o.status === 'pending';
-  document.getElementById('od-btn-complete').style.display = isPending ? '' : 'none';
-  document.getElementById('od-btn-reject').style.display   = isPending ? '' : 'none';
+
+  const isPending  = o.status === 'pending';
+  const isVerified = o.status === 'verified';
+  document.getElementById('od-btn-complete').style.display  = isPending  ? '' : 'none';
+  document.getElementById('od-btn-reject').style.display    = isPending  ? '' : 'none';
+  document.getElementById('od-btn-reenroll').style.display  = 'none';
+
+  const enrBanner = document.getElementById('od-enr-status');
+  enrBanner.style.display = 'none';
+
   openModal('modal-order');
+
+  // For complete orders, check whether enrollment actually exists
+  if (isVerified && o.profiles?.email && o.course_id) {
+    const { data: enr } = await sb.from('course_enrollments')
+      .select('id').eq('user_email', o.profiles.email).eq('course_id', o.course_id).maybeSingle();
+
+    if (enr) {
+      enrBanner.style.cssText = 'margin-top:16px;padding:12px 16px;border-radius:8px;font-size:13px;background:#e8f5e9;color:#1b5e20;border:1px solid #a5d6a7;display:block;';
+      enrBanner.innerHTML = '✅ Student is enrolled — <strong>' + (o.profiles?.email) + '</strong> has access to <strong>' + (o.courses?.title || 'this course') + '</strong>.';
+    } else {
+      enrBanner.style.cssText = 'margin-top:16px;padding:12px 16px;border-radius:8px;font-size:13px;background:#fff3e0;color:#bf360c;border:1px solid #ffcc80;display:block;';
+      enrBanner.innerHTML = '⚠️ <strong>Enrollment missing!</strong> This order is marked Complete but the student does NOT have course access yet. Click <strong>Re-enroll Student</strong> to fix.';
+      document.getElementById('od-btn-reenroll').style.display = '';
+    }
+  }
 }
 
 async function updateOrderStatus(status) {
@@ -3332,6 +3356,51 @@ async function updateOrderStatus(status) {
   closeModal('modal-order');
   loadOrders();
   loadDashboard();
+}
+
+/* Re-enroll a student for a completed order that was broken by old code */
+async function reEnrollStudent() {
+  const o = allOrders.find(x => x.id === currentOrderId);
+  if (!o) return;
+
+  const userEmail = o.profiles?.email;
+  const courseId  = o.course_id;
+  const courseName = o.courses?.title || 'the course';
+
+  if (!userEmail || !courseId) {
+    toast('Cannot enroll — missing email or course ID.', 'error'); return;
+  }
+
+  const btn = document.getElementById('od-btn-reenroll');
+  btn.textContent = 'Enrolling…'; btn.disabled = true;
+
+  // Insert into course_enrollments (try upsert, fallback to insert)
+  const { error } = await sb.from('course_enrollments').upsert(
+    { user_email: userEmail, course_id: courseId },
+    { onConflict: 'user_email,course_id', ignoreDuplicates: true }
+  );
+  if (error) {
+    await sb.from('course_enrollments').insert({ user_email: userEmail, course_id: courseId });
+  }
+
+  btn.textContent = '🔁 Re-enroll Student'; btn.disabled = false;
+
+  // Refresh enrollment banner
+  const enrBanner = document.getElementById('od-enr-status');
+  enrBanner.style.cssText = 'margin-top:16px;padding:12px 16px;border-radius:8px;font-size:13px;background:#e8f5e9;color:#1b5e20;border:1px solid #a5d6a7;display:block;';
+  enrBanner.innerHTML = '✅ Done! <strong>' + userEmail + '</strong> now has access to <strong>' + courseName + '</strong>. Student just needs to refresh.';
+  btn.style.display = 'none';
+
+  // Refresh user detail modal if open for this user
+  const openEmail = document.getElementById('ud-user-email')?.value;
+  if (openEmail && openEmail === userEmail) {
+    const { data: enrs } = await sb.from('course_enrollments').select('*').eq('user_email', userEmail);
+    _udEnrollments = enrs || [];
+    renderUDEnrollments();
+  }
+
+  toast('✅ ' + userEmail + ' enrolled in ' + courseName + '!', 'success');
+  loadOrders();
 }
 
 function filterOrders(val) {
