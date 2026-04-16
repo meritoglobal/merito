@@ -3989,11 +3989,25 @@ function openCourse(id) {
       thumbWrap.textContent = c.icon;
     }
 
-    // Wire up Add to Cart & Buy Now buttons
+    // Wire up Add to Cart & Buy Now buttons — check enrollment first
     const addBtn = document.querySelector('#page-detail .detail-sidebar .btn-hero-primary');
     const buyBtn = document.querySelector('#page-detail .detail-sidebar .btn-hero-secondary');
-    if (addBtn) addBtn.onclick = () => addToCartAndGo(c.id);
-    if (buyBtn) buyBtn.onclick = () => { addToCartAndGo(c.id); };
+    if (currentUser) {
+      sb.from('course_enrollments').select('id').eq('user_email', currentUser.email).eq('course_id', c.id).maybeSingle()
+        .then(({ data: enr }) => {
+          if (enr) {
+            // Already enrolled — show Start Learning
+            if (addBtn) { addBtn.textContent = '▶ Start Learning'; addBtn.onclick = () => openCoursePlayer(c.id); }
+            if (buyBtn) buyBtn.style.display = 'none';
+          } else {
+            if (addBtn) addBtn.onclick = () => addToCartAndGo(c.id);
+            if (buyBtn) buyBtn.onclick = () => addToCartAndGo(c.id);
+          }
+        });
+    } else {
+      if (addBtn) addBtn.onclick = () => addToCartAndGo(c.id);
+      if (buyBtn) buyBtn.onclick = () => addToCartAndGo(c.id);
+    }
 
     // ── Render Overview: What You'll Learn ──
     const overviewEl = document.getElementById('dt-overview');

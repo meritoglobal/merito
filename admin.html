@@ -3231,7 +3231,7 @@ async function toggleCourse(id, current) {
 let allOrders = [];
 let currentOrderId = null;
 async function loadOrders() {
-  const { data } = await sb.from('orders').select('*,profiles(full_name,phone),courses(title)').order('created_at', {ascending:false});
+  const { data } = await sb.from('orders').select('*,profiles(full_name,phone,email),courses(title)').order('created_at', {ascending:false});
   if (data) {
     allOrders = data;
     renderOrders(data);
@@ -3258,7 +3258,7 @@ function renderOrders(data) {
     <tr>
       <td>${o.profiles?.full_name || '—'}</td>
       <td>${o.profiles?.phone || '—'}</td>
-      <td style="font-size:12px;">${o.user_id?.slice(0,16)}...</td>
+      <td style="font-size:12px;">${o.profiles?.email || o.user_id?.slice(0,16)+'...'}</td>
       <td>${o.courses?.title || '—'}</td>
       <td>৳${Number(o.amount).toLocaleString()}</td>
       <td>0</td>
@@ -3290,15 +3290,48 @@ function viewOrder(id) {
 
 async function updateOrderStatus(status) {
   if (!currentOrderId) return;
-  await sb.from('orders').update({status}).eq('id', currentOrderId);
-  if (status === 'verified') {
-    const o = allOrders.find(x => x.id === currentOrderId);
-    if (o) await sb.from('enrollments').upsert({user_id: o.user_id, course_id: o.course_id});
+
+  const o = allOrders.find(x => x.id === currentOrderId);
+
+  const { error: orderErr } = await sb.from('orders').update({ status }).eq('id', currentOrderId);
+  if (orderErr) { toast('Failed to update order: ' + orderErr.message, 'error'); return; }
+
+  if (status === 'verified' && o) {
+    const userEmail = o.profiles?.email;
+    const courseId  = o.course_id;
+
+    if (!userEmail) {
+      toast('⚠ Order marked complete but could not enroll — user email not found.', 'error');
+    } else if (!courseId) {
+      toast('⚠ Order marked complete but course ID is missing.', 'error');
+    } else {
+      // Write to the same course_enrollments table the site reads from
+      const { error: enrErr } = await sb.from('course_enrollments').upsert(
+        { user_email: userEmail, course_id: courseId },
+        { onConflict: 'user_email,course_id', ignoreDuplicates: true }
+      );
+      if (enrErr) {
+        // Fallback: insert without upsert in case no unique constraint exists
+        await sb.from('course_enrollments').insert({ user_email: userEmail, course_id: courseId });
+      }
+
+      // If the user detail modal is currently open for this user, refresh enrollment list
+      const openEmail = document.getElementById('ud-user-email')?.value;
+      if (openEmail && openEmail === userEmail) {
+        const { data: enrs } = await sb.from('course_enrollments').select('*').eq('user_email', userEmail);
+        _udEnrollments = enrs || [];
+        renderUDEnrollments();
+      }
+
+      toast('✅ Order complete — ' + userEmail + ' enrolled in course!', 'success');
+    }
+  } else {
+    toast(status === 'rejected' ? '✗ Order rejected.' : 'Order updated.', status === 'rejected' ? 'error' : 'success');
   }
+
   closeModal('modal-order');
   loadOrders();
   loadDashboard();
-  toast(status === 'verified' ? 'Order marked complete & student enrolled!' : 'Order rejected', status === 'verified' ? 'success' : 'error');
 }
 
 function filterOrders(val) {
