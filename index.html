@@ -10,7 +10,7 @@
      Bump SITE_V on every deploy so users automatically get the fresh version. -->
 <script>
 !function(){
-  var SITE_V='merito_20260416_23';
+  var SITE_V='merito_20260416_24';
   if(localStorage.getItem('_sv')!==SITE_V){
     localStorage.setItem('_sv',SITE_V);
     // Hard reload bypasses disk cache and fetches fresh from server
@@ -2442,7 +2442,7 @@ footer{
         <iframe id="cpv-pdf-iframe" src="" style="width:100%;height:100%;min-height:80vh;border:none;display:block;"></iframe>
       </div>
 
-      <!-- Placeholder / link / picture -->
+      <!-- Placeholder / picture -->
       <div class="cp-viewer" id="cp-viewer">
         <div class="cp-viewer-inner" id="cp-viewer-placeholder">
           <div>
@@ -2452,6 +2452,9 @@ footer{
           </div>
         </div>
       </div>
+
+      <!-- Compact link / resource strip (no big box) -->
+      <div id="cpv-link-card" style="display:none;"></div>
 
       <!-- Item info below viewer -->
       <div class="cp-info" id="cp-info" style="display:none;">

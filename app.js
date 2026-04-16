@@ -1411,13 +1411,15 @@ function _playCPItem(item) {
   document.getElementById('cp-item-type').textContent = meta.label;
   document.getElementById('cp-item-desc').textContent  = item.description || '';
 
-  // Show the right panel area
-  const ytArea  = document.getElementById('cpv-yt-area');
-  const pdfArea = document.getElementById('cpv-pdf-area');
-  const viewer  = document.getElementById('cp-viewer');
-  if (ytArea)  ytArea.style.display  = 'none';
-  if (pdfArea) pdfArea.style.display = 'none';
-  if (viewer)  viewer.style.display  = 'none';
+  // Show the right panel area, hide all others
+  const ytArea   = document.getElementById('cpv-yt-area');
+  const pdfArea  = document.getElementById('cpv-pdf-area');
+  const viewer   = document.getElementById('cp-viewer');
+  const linkCard = document.getElementById('cpv-link-card');
+  if (ytArea)   ytArea.style.display   = 'none';
+  if (pdfArea)  pdfArea.style.display  = 'none';
+  if (viewer)   viewer.style.display   = 'none';
+  if (linkCard) { linkCard.style.display = 'none'; linkCard.innerHTML = ''; }
 
   if (itype === 'video') {
     const videoId = extractYouTubeId(iurl);
@@ -1455,16 +1457,34 @@ function _playCPItem(item) {
       : `<div class="cp-viewer-inner"><div class="cp-viewer-icon">🖼</div><div class="cp-viewer-label">No image URL</div></div>`;
 
   } else if (itype === 'link') {
-    if (viewer) viewer.style.display = '';
-    viewer.innerHTML = `<div class="cp-viewer-inner"><div>
-      <div class="cp-viewer-icon">🔗</div>
-      <div class="cp-viewer-label">${iname || 'External Resource'}</div>
-      <div class="cp-viewer-sub">${item.description || iurl}</div>
-      ${iurl ? `<a href="${iurl}" target="_blank" class="cp-viewer-btn">Open Link <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6M15 3h6v6M10 14L21 3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></a>` : ''}
-    </div></div>`;
+    // Compact strip — no huge viewer box
+    const linkCard = document.getElementById('cpv-link-card');
+    if (linkCard) {
+      linkCard.style.display = '';
+      linkCard.innerHTML = `
+        <div style="display:flex;align-items:center;gap:14px;padding:18px 24px;background:rgba(74,0,177,0.07);border-bottom:1px solid rgba(74,0,177,0.15);">
+          <div style="width:38px;height:38px;border-radius:10px;background:rgba(74,0,177,0.15);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;">🔗</div>
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:2px;">${iname || 'External Link'}</div>
+            ${iurl ? `<div style="font-size:12px;color:var(--text-dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${iurl}</div>` : ''}
+          </div>
+          ${iurl ? `<a href="${iurl}" target="_blank" rel="noopener" style="flex-shrink:0;display:inline-flex;align-items:center;gap:6px;padding:8px 18px;background:linear-gradient(135deg,#4A00B1,#7B2FBE);color:#fff;font-size:13px;font-weight:700;border-radius:8px;text-decoration:none;white-space:nowrap;">
+            Open Link
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+          </a>` : ''}
+        </div>`;
+    }
   } else {
-    if (viewer) viewer.style.display = '';
-    viewer.innerHTML = `<div class="cp-viewer-inner"><div class="cp-viewer-icon">📌</div><div class="cp-viewer-label">${iname}</div><div class="cp-viewer-sub">${item.description||''}</div></div>`;
+    // Fallback for unknown types
+    const linkCard = document.getElementById('cpv-link-card');
+    if (linkCard) {
+      linkCard.style.display = '';
+      linkCard.innerHTML = `<div style="padding:18px 24px;display:flex;align-items:center;gap:12px;background:rgba(74,0,177,0.07);border-bottom:1px solid rgba(74,0,177,0.15);">
+        <span style="font-size:22px;">📌</span>
+        <div style="font-size:14px;font-weight:600;color:var(--text);">${iname}</div>
+        ${item.description ? `<div style="font-size:12px;color:var(--text-dim);">${item.description}</div>` : ''}
+      </div>`;
+    }
   }
 }
 
