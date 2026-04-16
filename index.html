@@ -166,7 +166,7 @@ body::before{
 }
 .nav-links a:hover{color:#fff;background:rgba(255,255,255,0.07);}
 
-/* ── Courses hover dropdown — Ocoya-style horizontal mega menu ── */
+/* ── Courses hover dropdown — compact Ocoya style ── */
 .nav-has-dropdown{position:relative;list-style:none;}
 .nav-has-dropdown>a{display:flex;align-items:center;gap:4px;}
 .nav-caret{
@@ -175,13 +175,15 @@ body::before{
 }
 .nav-has-dropdown:hover .nav-caret{transform:rotate(180deg);}
 
+/* padding-top bridges the gap between nav link and panel —
+   prevents mouseout when cursor crosses the space */
 .nav-dropdown{
-  position:absolute;top:calc(100% + 10px);
-  left:50%;transform:translateX(-50%) translateY(8px);
-  padding-top:0;
+  position:absolute;top:100%;
+  left:50%;transform:translateX(-50%) translateY(6px);
+  padding-top:10px;          /* invisible hover bridge */
   opacity:0;pointer-events:none;
-  transition:opacity .22s cubic-bezier(.4,0,.2,1),
-             transform .22s cubic-bezier(.4,0,.2,1);
+  transition:opacity .2s cubic-bezier(.4,0,.2,1),
+             transform .2s cubic-bezier(.4,0,.2,1);
   z-index:500;
 }
 .nav-has-dropdown:hover .nav-dropdown{
@@ -189,81 +191,59 @@ body::before{
   transform:translateX(-50%) translateY(0);
 }
 
-/* Arrow tip pointing up */
+/* Arrow — sits inside the padding-top bridge area */
 .nav-dropdown::before{
-  content:'';position:absolute;top:-6px;left:50%;
+  content:'';position:absolute;top:4px;left:50%;
   transform:translateX(-50%) rotate(45deg);
-  width:12px;height:12px;
-  background:#1A0E2E;
-  border-left:1px solid rgba(74,0,177,0.22);
-  border-top:1px solid rgba(74,0,177,0.22);
-  z-index:1;
+  width:10px;height:10px;
+  background:#1B0F2F;
+  border-left:1px solid rgba(74,0,177,0.25);
+  border-top:1px solid rgba(74,0,177,0.25);
+  z-index:2;
 }
 
-/* Mega panel */
+/* Compact panel */
 .nav-dropdown-inner{
-  background:#1A0E2E;
-  border:1px solid rgba(74,0,177,0.22);
-  border-radius:16px;
-  padding:20px 24px;
-  min-width:580px;
-  box-shadow:0 24px 60px rgba(0,0,0,0.55),
-             0 0 0 1px rgba(74,0,177,0.08);
-  display:grid;
-  grid-template-columns:auto 1fr;
-  gap:0 24px;
+  background:#1B0F2F;
+  border:1px solid rgba(74,0,177,0.25);
+  border-radius:14px;
+  padding:8px;
+  min-width:200px;
+  box-shadow:0 16px 40px rgba(0,0,0,0.6),
+             inset 0 1px 0 rgba(255,255,255,0.04);
+  display:flex;flex-direction:column;gap:1px;
+  position:relative;z-index:1;
 }
 
-/* Left: "All Courses" hero cell */
-.nav-dd-hero{
-  width:180px;
-  background:rgba(74,0,177,0.12);
-  border:1px solid rgba(74,0,177,0.18);
-  border-radius:10px;
-  padding:16px;
-  display:flex;flex-direction:column;justify-content:space-between;
-  cursor:pointer;transition:background .18s;
-  text-decoration:none;
-}
-.nav-dd-hero:hover{background:rgba(74,0,177,0.22);}
-.nav-dd-hero-icon{font-size:28px;margin-bottom:10px;}
-.nav-dd-hero-title{
-  font-size:14px;font-weight:700;color:var(--text);
-  margin-bottom:4px;line-height:1.3;
-}
-.nav-dd-hero-sub{font-size:11px;color:var(--text-dim);line-height:1.4;}
-.nav-dd-hero-arrow{
-  font-size:18px;color:var(--text-acc);
-  margin-top:12px;display:inline-block;
-  transition:transform .18s;
-}
-.nav-dd-hero:hover .nav-dd-hero-arrow{transform:translateX(4px);}
-
-/* Right: category grid */
-.nav-dd-grid{
-  display:grid;
-  grid-template-columns:1fr 1fr;
-  gap:4px;
-  align-content:start;
-}
-
+/* Category items */
 .nav-dd-item{
-  display:flex;align-items:center;gap:10px;
-  padding:9px 12px;border-radius:8px;
-  font-size:13px;font-weight:500;color:var(--text-mid);
+  display:flex;align-items:center;gap:9px;
+  padding:8px 12px;border-radius:8px;
+  font-size:13px;font-weight:500;color:rgba(255,255,255,0.68);
   cursor:pointer;
-  transition:background .15s, color .15s;
+  transition:background .14s, color .14s;
   white-space:nowrap;text-decoration:none;
 }
-.nav-dd-item:hover{background:rgba(74,0,177,0.15);color:var(--text);}
+.nav-dd-item:hover{background:rgba(74,0,177,0.2);color:#fff;}
 .nav-dd-icon{
-  font-size:15px;width:28px;height:28px;
-  background:rgba(74,0,177,0.12);border-radius:6px;
+  font-size:14px;width:26px;height:26px;
+  background:rgba(255,255,255,0.05);border-radius:6px;
   display:flex;align-items:center;justify-content:center;
-  flex-shrink:0;
-  transition:background .15s;
+  flex-shrink:0;transition:background .14s;
 }
-.nav-dd-item:hover .nav-dd-icon{background:rgba(74,0,177,0.28);}
+.nav-dd-item:hover .nav-dd-icon{background:rgba(74,0,177,0.3);}
+
+/* "View all" footer link inside panel */
+.nav-dd-divider{
+  height:1px;background:rgba(255,255,255,0.06);margin:4px 4px;
+}
+.nav-dd-viewall{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:8px 12px;border-radius:8px;
+  font-size:12px;font-weight:600;color:var(--text-acc);
+  cursor:pointer;transition:background .14s;text-decoration:none;
+}
+.nav-dd-viewall:hover{background:rgba(74,0,177,0.15);}
 
 /* ── Notification bell ── */
 .nav-bell{
@@ -1594,17 +1574,12 @@ footer{
         <a onclick="goCat('all')">Courses <span class="nav-caret">▼</span></a>
         <div class="nav-dropdown" id="nav-courses-dropdown">
           <div class="nav-dropdown-inner">
-            <!-- Left: hero cell -->
-            <a class="nav-dd-hero" onclick="goCat('all')">
-              <div>
-                <div class="nav-dd-hero-icon">📚</div>
-                <div class="nav-dd-hero-title">All Courses</div>
-                <div class="nav-dd-hero-sub">Browse everything we offer</div>
-              </div>
-              <span class="nav-dd-hero-arrow">→</span>
+            <!-- Category list — populated by buildCourseDropdown() -->
+            <div id="nav-dd-cat-grid"></div>
+            <div class="nav-dd-divider"></div>
+            <a class="nav-dd-viewall" onclick="goCat('all')">
+              View all courses <span>→</span>
             </a>
-            <!-- Right: category grid — populated by buildCourseDropdown() -->
-            <div class="nav-dd-grid" id="nav-dd-cat-grid"></div>
           </div>
         </div>
       </li>
@@ -4231,7 +4206,8 @@ function buildCourseDropdown() {
   if (!grid) return;
   grid.innerHTML = ALL_CATEGORIES.map(c => `
     <a class="nav-dd-item" onclick="goCat('${c.cat}')">
-      <span class="nav-dd-icon">${CAT_ICONS[c.cat]||CAT_ICONS.default}</span>${c.name}
+      <span class="nav-dd-icon">${CAT_ICONS[c.cat]||CAT_ICONS.default}</span>
+      <span>${c.name}</span>
     </a>`).join('');
 }
 
