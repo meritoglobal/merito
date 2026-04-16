@@ -1699,16 +1699,28 @@ tbody tr.drag-over td:first-child{
       <!-- ── Payment Settings ── -->
       <div class="ss-section">
         <div class="ss-section-head" onclick="toggleSS('ss-payment-sec')">
-          <div class="ss-section-title">💳 Payment Settings — bKash, Nagad &amp; Bank Transfer details</div>
+          <div class="ss-section-title">💳 Payment Settings — bKash, Nagad &amp; Bank Transfer instructions</div>
           <span class="ss-section-toggle" id="ss-payment-sec-arrow">▾</span>
         </div>
         <div id="ss-payment-sec" style="display:block;">
-          <div class="ss-section-body single-col">
-            <div class="ss-field"><label>bKash Merchant Number</label><input id="ss-bkash_number" placeholder="01XXXXXXXXX"></div>
-            <div class="ss-field"><label>Nagad Merchant Number</label><input id="ss-nagad_number" placeholder="01XXXXXXXXX"></div>
-            <div class="ss-field"><label>Bank Transfer Details (one detail per line, e.g. Bank: Name, Account: XXXX, Branch: Location)</label><textarea id="ss-bank_details" rows="5" style="width:100%;font-family:monospace;font-size:13px;padding:10px;background:var(--bg);color:var(--text);border:1px solid var(--border-sub);border-radius:6px;" placeholder="Bank: Dutch-Bangla Bank&#10;Account Name: Merito Global&#10;Account No: XXXX-XXXX-XXXX&#10;Branch: Dhaka Main&#10;Routing: 090261111"></textarea></div>
+          <div class="ss-section-body single-col" style="gap:20px;">
+            <div class="ss-field">
+              <label style="font-weight:700;color:#e91e8c;">🟣 bKash Payment Instructions</label>
+              <p style="font-size:11px;color:var(--text-dim);margin:4px 0 6px;">This text is shown to users when they select bKash. Include your merchant number, name, and any instructions.</p>
+              <textarea id="ss-bkash_instructions" rows="5" style="width:100%;font-size:13px;padding:12px;background:var(--bg);color:var(--text);border:1px solid var(--border-sub);border-radius:6px;line-height:1.7;" placeholder="Send the total amount to our bKash Merchant number: 01XXXXXXXXX&#10;Account name: Merito Global&#10;After sending, enter the Transaction ID below."></textarea>
+            </div>
+            <div class="ss-field">
+              <label style="font-weight:700;color:#f97316;">🟠 Nagad Payment Instructions</label>
+              <p style="font-size:11px;color:var(--text-dim);margin:4px 0 6px;">This text is shown to users when they select Nagad.</p>
+              <textarea id="ss-nagad_instructions" rows="5" style="width:100%;font-size:13px;padding:12px;background:var(--bg);color:var(--text);border:1px solid var(--border-sub);border-radius:6px;line-height:1.7;" placeholder="Send the total amount to our Nagad Merchant number: 01XXXXXXXXX&#10;Account name: Merito Global&#10;After sending, enter the Transaction ID below."></textarea>
+            </div>
+            <div class="ss-field">
+              <label style="font-weight:700;color:#3b82f6;">🔵 Bank Transfer Instructions</label>
+              <p style="font-size:11px;color:var(--text-dim);margin:4px 0 6px;">This text is shown when Bank Transfer is selected. Include all bank details.</p>
+              <textarea id="ss-bank_instructions" rows="7" style="width:100%;font-size:13px;padding:12px;background:var(--bg);color:var(--text);border:1px solid var(--border-sub);border-radius:6px;line-height:1.7;" placeholder="Bank: Dutch-Bangla Bank&#10;Account Name: Merito Global&#10;Account Number: XXXX-XXXX-XXXX&#10;Branch: Dhaka Main&#10;Routing: 090261111&#10;After transfer, enter the Reference Number below."></textarea>
+            </div>
           </div>
-          <div class="ss-save-row"><button class="btn-primary" onclick="saveSSection('payment-sec',['bkash_number','nagad_number','bank_details'])">💾 Save Payment Settings</button></div>
+          <div class="ss-save-row"><button class="btn-primary" onclick="saveSSection('payment-sec',['bkash_instructions','nagad_instructions','bank_instructions'])">💾 Save Payment Instructions</button></div>
         </div>
       </div>
 
@@ -2769,7 +2781,7 @@ const SS_KEYS = [
   'testi3_name','testi3_result','testi3_text',
   'app_label','app_downloads','app_heading','app_sub',
   'footer_tagline','footer_addr1','footer_addr2','footer_addr3','footer_email','footer_copyright',
-  'bkash_number','nagad_number','bank_details'
+  'bkash_instructions','nagad_instructions','bank_instructions'
 ];
 
 async function loadSiteSettings() {

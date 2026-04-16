@@ -2231,56 +2231,21 @@ footer{
 <div id="page-cart" class="page">
   <div class="cart-page">
     <div class="sec-label">Shopping</div>
-    <h2>Your Cart <span style="font-size:16px;color:var(--text-dim);font-weight:400;">(2 items)</span></h2>
+    <h2>Your Cart <span id="cart-count-label" style="font-size:16px;color:var(--text-dim);font-weight:400;"></span></h2>
     <div class="cart-grid" style="margin-top:28px;">
-      <div>
-        <div class="cart-item">
-          <div class="cart-thumb">📊</div>
-          <div class="cart-info">
-            <div class="cart-title">IBA MBA Admission 2026</div>
-            <div class="cart-meta">IBA MBA • 60+ Lessons</div>
-            <div class="qty-box">
-              <button class="qty-btn">−</button>
-              <span class="qty-num">1</span>
-              <button class="qty-btn">+</button>
-            </div>
-          </div>
-          <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;">
-            <div class="cart-price">৳2,500</div>
-            <a class="cart-remove">Remove</a>
-          </div>
-        </div>
-        <div class="cart-item">
-          <div class="cart-thumb">📝</div>
-          <div class="cart-info">
-            <div class="cart-title">IELTS Hero — Complete Course</div>
-            <div class="cart-meta">IELTS Prep • 80+ Lessons</div>
-            <div class="qty-box">
-              <button class="qty-btn">−</button>
-              <span class="qty-num">1</span>
-              <button class="qty-btn">+</button>
-            </div>
-          </div>
-          <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;">
-            <div class="cart-price">৳3,000</div>
-            <a class="cart-remove">Remove</a>
-          </div>
-        </div>
-      </div>
+      <!-- Items column — fully managed by renderCart() -->
+      <div id="cart-items-container"></div>
 
       <div class="order-box">
         <h3 style="font-size:16px;font-weight:800;color:var(--text);margin-bottom:16px;">Order Summary</h3>
-        <div class="cart-progress"><div class="cart-progress-fill"></div></div>
-        <div class="summary-row"><span>Subtotal</span><span>৳5,500</span></div>
-        <div class="summary-row"><span>Discount</span><span style="color:#00C25E;">-৳1,000</span></div>
-        <!-- Payment fields: w=241 h=38 rx=5 stroke=#4A00B1 -->
+        <div class="cart-progress"><div class="cart-progress-fill" id="cart-progress-fill"></div></div>
+        <div class="summary-row"><span>Subtotal</span><span id="cart-subtotal">৳0</span></div>
         <div class="pay-grid">
           <input class="pay-input-box" placeholder="Coupon code">
           <input class="pay-input-box" placeholder="Referral code">
         </div>
-        <div class="summary-row total"><span>Total</span><span>৳4,500</span></div>
-        <!-- Confirm btn: h=68 rx=8 fill=#04B852 -->
-        <button class="btn-confirm" onclick="proceedToPayment()">
+        <div class="summary-row total"><span>Total</span><span id="cart-total">৳0</span></div>
+        <button class="btn-confirm" id="cart-proceed-btn" onclick="proceedToPayment()" style="display:none;">
           <svg width="20" height="20" fill="none" viewBox="0 0 24 24"><path d="M9 12l2 2 4-4" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="12" r="10" stroke="#fff" stroke-width="2"/></svg>
           Proceed to Payment
         </button>
@@ -2298,7 +2263,7 @@ footer{
     <div style="position:absolute;top:-200px;left:50%;transform:translateX(-50%);width:900px;height:600px;background:radial-gradient(ellipse 50% 50% at 50% 30%,rgba(74,0,177,0.45) 0%,transparent 70%);pointer-events:none;"></div>
     <div class="pm-wrap" style="position:relative;z-index:1;">
       <div style="font-size:22px;font-weight:900;color:var(--text);margin-bottom:4px;">Select Payment</div>
-      <div style="font-size:14px;color:var(--text-dim);margin-bottom:24px;">Total: <strong style="color:var(--text);">৳4,500</strong></div>
+      <div style="font-size:14px;color:var(--text-dim);margin-bottom:24px;">Total: <strong id="pm-total-label" style="color:var(--text);">৳0</strong></div>
       <div class="pm-option selected" onclick="selPM(this,'bkash')">
         <div class="pm-icon bk">bK</div>
         <span>bKash</span>
@@ -2412,11 +2377,51 @@ footer{
     <h2>Merito Books</h2>
     <p class="sec-sub">Curated books written and recommended by our expert mentors</p>
     <div class="books-grid">
-      <a class="book-card"><div class="book-cover"><div class="book-cover-inner">📕</div></div><div class="book-body"><div class="book-title">IBA MBA Math Mastery</div><div class="book-author">By Merito Team</div><div class="book-price">৳350</div></div></a>
-      <a class="book-card"><div class="book-cover"><div class="book-cover-inner">📗</div></div><div class="book-body"><div class="book-title">IELTS Writing Task 2 Guide</div><div class="book-author">By IELTS Team</div><div class="book-price">৳280</div></div></a>
-      <a class="book-card"><div class="book-cover"><div class="book-cover-inner">📘</div></div><div class="book-body"><div class="book-title">1000 Mnemonic Vocabulary</div><div class="book-author">By Merito Team</div><div class="book-price">৳420</div></div></a>
-      <a class="book-card"><div class="book-cover"><div class="book-cover-inner">📙</div></div><div class="book-body"><div class="book-title">HSC English Grammar Complete</div><div class="book-author">By HSC Team</div><div class="book-price">৳250</div></div></a>
-      <a class="book-card"><div class="book-cover"><div class="book-cover-inner">📒</div></div><div class="book-body"><div class="book-title">BBA Admission Strategy 2026</div><div class="book-author">By Merito Team</div><div class="book-price">৳380</div></div></a>
+      <div class="book-card">
+        <div class="book-cover"><div class="book-cover-inner">📕</div></div>
+        <div class="book-body">
+          <div class="book-title">IBA MBA Math Mastery</div>
+          <div class="book-author">By Merito Team</div>
+          <div class="book-price">৳350</div>
+          <button class="btn-enroll" style="margin-top:10px;width:100%;" onclick="addBookToCart('IBA MBA Math Mastery',350,'📕')">Add to Cart</button>
+        </div>
+      </div>
+      <div class="book-card">
+        <div class="book-cover"><div class="book-cover-inner">📗</div></div>
+        <div class="book-body">
+          <div class="book-title">IELTS Writing Task 2 Guide</div>
+          <div class="book-author">By IELTS Team</div>
+          <div class="book-price">৳280</div>
+          <button class="btn-enroll" style="margin-top:10px;width:100%;" onclick="addBookToCart('IELTS Writing Task 2 Guide',280,'📗')">Add to Cart</button>
+        </div>
+      </div>
+      <div class="book-card">
+        <div class="book-cover"><div class="book-cover-inner">📘</div></div>
+        <div class="book-body">
+          <div class="book-title">1000 Mnemonic Vocabulary</div>
+          <div class="book-author">By Merito Team</div>
+          <div class="book-price">৳420</div>
+          <button class="btn-enroll" style="margin-top:10px;width:100%;" onclick="addBookToCart('1000 Mnemonic Vocabulary',420,'📘')">Add to Cart</button>
+        </div>
+      </div>
+      <div class="book-card">
+        <div class="book-cover"><div class="book-cover-inner">📙</div></div>
+        <div class="book-body">
+          <div class="book-title">HSC English Grammar Complete</div>
+          <div class="book-author">By HSC Team</div>
+          <div class="book-price">৳250</div>
+          <button class="btn-enroll" style="margin-top:10px;width:100%;" onclick="addBookToCart('HSC English Grammar Complete',250,'📙')">Add to Cart</button>
+        </div>
+      </div>
+      <div class="book-card">
+        <div class="book-cover"><div class="book-cover-inner">📒</div></div>
+        <div class="book-body">
+          <div class="book-title">BBA Admission Strategy 2026</div>
+          <div class="book-author">By Merito Team</div>
+          <div class="book-price">৳380</div>
+          <button class="btn-enroll" style="margin-top:10px;width:100%;" onclick="addBookToCart('BBA Admission Strategy 2026',380,'📒')">Add to Cart</button>
+        </div>
+      </div>
     </div>
   </div>
 </div>
@@ -2498,7 +2503,12 @@ let activeCart = []; // [{courseId, title, price, icon, orderId}]
 let currentCourseId = null;
 let activePaymentMethod = 'bkash';
 let _pendingCourseId = null; // course to open after login completes
-let _paySettings = { bkash_number:'01XXXXXXXXX', nagad_number:'01XXXXXXXXX', bank_details:'Bank: Dutch-Bangla Bank\nAccount: XXXX-XXXX-XXXX\nBranch: Dhaka Main' };
+let _cartKeyCounter = 0;    // unique key for each cart item
+let _paySettings = {
+  bkash_instructions: 'Send the total amount to our bKash Merchant number: 01XXXXXXXXX\nPlease include your full name as a reference.',
+  nagad_instructions:  'Send the total amount to our Nagad Merchant number: 01XXXXXXXXX\nPlease include your full name as a reference.',
+  bank_instructions:   'Bank: Dutch-Bangla Bank\nAccount Name: Merito Global\nAccount No: XXXX-XXXX-XXXX\nBranch: Dhaka Main\nAfter transfer, enter the reference number below.'
+};
 
 /* ── On page load ── */
 window.addEventListener('DOMContentLoaded', async () => {
@@ -2604,9 +2614,9 @@ async function loadSiteText() {
   }
 
   // Payment settings
-  if (map.bkash_number)  _paySettings.bkash_number  = map.bkash_number;
-  if (map.nagad_number)  _paySettings.nagad_number  = map.nagad_number;
-  if (map.bank_details)  _paySettings.bank_details  = map.bank_details;
+  if (map.bkash_instructions) _paySettings.bkash_instructions = map.bkash_instructions;
+  if (map.nagad_instructions)  _paySettings.nagad_instructions  = map.nagad_instructions;
+  if (map.bank_instructions)   _paySettings.bank_instructions   = map.bank_instructions;
   // Re-render current payment info if payment page is open
   const info = document.getElementById('pm-info');
   if (info) _renderPayInfo(activePaymentMethod);
@@ -3431,7 +3441,25 @@ async function addToCartAndGo(courseId) {
       }).select('id').single();
       orderId = newOrder?.id || null;
     } catch(e) { /* non-critical */ }
-    activeCart.push({ courseId: c.id, title: c.title, price: c.price, icon: c.icon, orderId });
+    activeCart.push({ cartKey: 'c_' + (++_cartKeyCounter), courseId: c.id, title: c.title, price: c.price, icon: c.icon, type: 'course', orderId });
+  }
+  renderCart();
+  go('cart');
+}
+
+/* ─ Add a book to cart ─ */
+function addBookToCart(title, price, icon) {
+  if (!currentUser) {
+    _pendingCourseId = null; // no specific course to redirect to
+    go('login'); return;
+  }
+  const cartKey = 'b_' + (++_cartKeyCounter);
+  const already = activeCart.find(x => x.type === 'book' && x.title === title);
+  if (!already) {
+    activeCart.push({ cartKey, courseId: null, title, price, icon: icon || '📚', type: 'book', orderId: null });
+    toast(title + ' added to cart!', 'success');
+  } else {
+    toast('Already in cart!', 'success');
   }
   renderCart();
   go('cart');
@@ -3448,15 +3476,28 @@ async function proceedToPayment() {
 }
 
 function renderCart() {
-  const container = document.querySelector('.cart-grid > div:first-child');
-  const totalEl   = document.querySelectorAll('.summary-row.total span')[1];
-  const subtotalEl = document.querySelectorAll('.summary-row span')[1];
+  const container  = document.getElementById('cart-items-container');
+  const countLabel = document.getElementById('cart-count-label');
+  const totalEl    = document.getElementById('cart-total');
+  const subtotalEl = document.getElementById('cart-subtotal');
+  const proceedBtn = document.getElementById('cart-proceed-btn');
   if (!container) return;
 
-  if (activeCart.length === 0) {
-    container.innerHTML = '<p style="color:var(--text-dim);padding:40px 0;">Your cart is empty. <a onclick="go(\'courses\')" style="color:var(--text-acc);cursor:pointer;">Browse courses</a></p>';
-    if (totalEl) totalEl.textContent = '৳0';
+  const n = activeCart.length;
+  if (countLabel) countLabel.textContent = n ? `(${n} item${n > 1 ? 's' : ''})` : '';
+
+  if (n === 0) {
+    container.innerHTML = `
+      <div style="padding:60px 0;text-align:center;">
+        <div style="font-size:48px;margin-bottom:16px;">🛒</div>
+        <p style="color:var(--text-dim);font-size:15px;margin-bottom:12px;">Your cart is empty.</p>
+        <a onclick="go('courses')" style="color:var(--text-acc);cursor:pointer;font-size:14px;font-weight:600;">Browse Courses →</a>
+        <span style="margin:0 12px;color:var(--text-dim);">•</span>
+        <a onclick="go('books')" style="color:var(--text-acc);cursor:pointer;font-size:14px;font-weight:600;">Browse Books →</a>
+      </div>`;
+    if (totalEl)    totalEl.textContent    = '৳0';
     if (subtotalEl) subtotalEl.textContent = '৳0';
+    if (proceedBtn) proceedBtn.style.display = 'none';
     return;
   }
 
@@ -3466,20 +3507,21 @@ function renderCart() {
       <div class="cart-thumb">${item.icon}</div>
       <div class="cart-info">
         <div class="cart-title">${item.title}</div>
-        <div class="cart-meta">৳${item.price.toLocaleString()}</div>
+        <div class="cart-meta" style="font-size:12px;color:var(--text-dim);margin-top:4px;">${item.type === 'book' ? '📚 Book' : '🎓 Course'}</div>
       </div>
       <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;">
         <div class="cart-price">৳${item.price.toLocaleString()}</div>
-        <a class="cart-remove" onclick="removeFromCart(${item.courseId})" style="cursor:pointer;">Remove</a>
+        <a class="cart-remove" onclick="removeFromCart('${item.cartKey}')" style="cursor:pointer;">Remove</a>
       </div>
     </div>`).join('');
 
-  if (totalEl) totalEl.textContent = '৳' + total.toLocaleString();
+  if (totalEl)    totalEl.textContent    = '৳' + total.toLocaleString();
   if (subtotalEl) subtotalEl.textContent = '৳' + total.toLocaleString();
+  if (proceedBtn) proceedBtn.style.display = '';
 }
 
-function removeFromCart(courseId) {
-  activeCart = activeCart.filter(x => x.courseId !== courseId);
+function removeFromCart(cartKey) {
+  activeCart = activeCart.filter(x => x.cartKey !== cartKey);
   renderCart();
 }
 
@@ -4270,30 +4312,24 @@ function selPM(el, method) {
   _renderPayInfo(method);
 }
 
-function _renderPayInfo(method, amt) {
+function _renderPayInfo(method) {
   const info = document.getElementById('pm-info');
   if (!info) return;
-  if (!amt) {
-    const total = activeCart.reduce((s, i) => s + i.price, 0);
-    amt = '৳' + total.toLocaleString();
-  }
-  if (method==='bkash') {
-    info.innerHTML = `
-      <p style="font-size:13px;color:var(--text-mid);margin-bottom:6px;">Send <strong style="color:var(--text);">${amt}</strong> to bKash Merchant:</p>
-      <p style="font-size:20px;font-weight:900;color:var(--text-acc);letter-spacing:.04em;margin-bottom:14px;">${_paySettings.bkash_number}</p>
-      <input id="txn-id" class="pm-number" placeholder="Enter bKash Transaction ID">`;
-  } else if (method==='nagad') {
-    info.innerHTML = `
-      <p style="font-size:13px;color:var(--text-mid);margin-bottom:6px;">Send <strong style="color:var(--text);">${amt}</strong> to Nagad Merchant:</p>
-      <p style="font-size:20px;font-weight:900;color:var(--text-acc);letter-spacing:.04em;margin-bottom:14px;">${_paySettings.nagad_number}</p>
-      <input id="txn-id" class="pm-number" placeholder="Enter Nagad Transaction ID">`;
-  } else if (method==='bank') {
-    const lines = (_paySettings.bank_details||'').split('\n').join('<br>');
-    info.innerHTML = `
-      <p style="font-size:13px;color:var(--text-mid);margin-bottom:6px;">Transfer <strong style="color:var(--text);">${amt}</strong> to:</p>
-      <p style="font-size:14px;color:var(--text);line-height:2;margin-bottom:14px;">${lines}</p>
-      <input id="txn-id" class="pm-number" placeholder="Enter Reference Number">`;
-  }
+  const total = activeCart.reduce((s, i) => s + i.price, 0);
+  const totalLabel = document.getElementById('pm-total-label');
+  if (totalLabel) totalLabel.textContent = '৳' + total.toLocaleString();
+  const amt = '৳' + total.toLocaleString();
+
+  const placeholders = { bkash:'Enter bKash Transaction ID', nagad:'Enter Nagad Transaction ID', bank:'Enter Reference / Transaction Number' };
+  const ph = placeholders[method] || 'Enter Transaction ID';
+
+  let instructionKey = method === 'bkash' ? 'bkash_instructions' : method === 'nagad' ? 'nagad_instructions' : 'bank_instructions';
+  const instructionText = (_paySettings[instructionKey] || '').split('\n').map(l => `<p style="margin:0 0 6px;font-size:14px;color:var(--text);line-height:1.7;">${l}</p>`).join('');
+
+  info.innerHTML = `
+    <div style="margin-bottom:14px;">${instructionText}</div>
+    <div style="font-size:12px;color:var(--text-dim);margin-bottom:10px;border-top:1px solid rgba(255,255,255,0.06);padding-top:10px;">Total amount to send: <strong style="color:var(--text-acc);font-size:16px;">${amt}</strong></div>
+    <input id="txn-id" class="pm-number" placeholder="${ph}">`;
 }
 
 /* ── Profile tabs ── */
