@@ -10,7 +10,7 @@
      Bump SITE_V on every deploy so users automatically get the fresh version. -->
 <script>
 !function(){
-  var SITE_V='merito_20260416_13';
+  var SITE_V='merito_20260416_14';
   if(localStorage.getItem('_sv')!==SITE_V){
     localStorage.setItem('_sv',SITE_V);
     // Hard reload bypasses disk cache and fetches fresh from server
@@ -4356,14 +4356,79 @@ function profTab(tab, el) {
     content.innerHTML = `<h3 style="font-size:17px;font-weight:800;color:var(--text);margin-bottom:20px;">My Enrolled Courses</h3><div class="courses-grid" id="prof-grid"></div>`;
     loadProfileData();
   } else {
-    content.innerHTML = `
-      <h3 style="font-size:17px;font-weight:800;color:var(--text);margin-bottom:20px;">Edit Profile</h3>
-      <div class="form-group"><label class="form-label">Full Name</label><input class="form-input" value="Student Name"></div>
-      <div class="form-group"><label class="form-label">Phone</label><input class="form-input" value="01XXXXXXXXX"></div>
-      <div class="form-group"><label class="form-label">Email</label><input class="form-input" value="student@email.com"></div>
-      <div class="form-group"><label class="form-label">New Password</label><input class="form-input" type="password" placeholder="Leave blank to keep current"></div>
-      <button class="btn-hero-primary" style="border-radius:8px;padding:12px 28px;margin-top:4px;">Save Changes</button>`;
+    // Load real profile data then populate form
+    (async () => {
+      let name = '', phone = '', email = currentUser?.email || '';
+      if (currentUser) {
+        const { data: p } = await sb.from('profiles').select('full_name,phone').eq('id', currentUser.id).single();
+        name  = p?.full_name || currentUser.user_metadata?.full_name || '';
+        phone = p?.phone     || currentUser.user_metadata?.phone     || '';
+      }
+      content.innerHTML = `
+        <h3 style="font-size:17px;font-weight:800;color:var(--text);margin-bottom:20px;">Edit Profile</h3>
+        <div id="edit-prof-msg" style="display:none;padding:10px 14px;border-radius:8px;margin-bottom:14px;font-size:13px;font-weight:600;"></div>
+        <div class="form-group"><label class="form-label">Full Name</label>
+          <input id="ep-name" class="form-input" value="${name.replace(/"/g,'&quot;')}"></div>
+        <div class="form-group"><label class="form-label">Phone</label>
+          <input id="ep-phone" class="form-input" type="tel" value="${phone.replace(/"/g,'&quot;')}"></div>
+        <div class="form-group"><label class="form-label">Email</label>
+          <input class="form-input" value="${email}" disabled style="opacity:0.5;cursor:not-allowed;"></div>
+        <div class="form-group"><label class="form-label">New Password <span style="font-weight:400;color:var(--text-dim);font-size:12px;">(leave blank to keep current)</span></label>
+          <input id="ep-pass" class="form-input" type="password" placeholder="4–16 characters" maxlength="16"></div>
+        <button id="ep-save-btn" class="btn-hero-primary" onclick="saveEditProfile()" style="border-radius:8px;padding:12px 28px;margin-top:4px;">Save Changes</button>`;
+    })();
   }
+}
+
+/* ── Save edited profile ── */
+async function saveEditProfile() {
+  const name  = document.getElementById('ep-name')?.value.trim();
+  const phone = document.getElementById('ep-phone')?.value.trim();
+  const pass  = document.getElementById('ep-pass')?.value;
+  const msg   = document.getElementById('edit-prof-msg');
+  const btn   = document.getElementById('ep-save-btn');
+
+  if (!name)  { _epMsg('Full name is required.', 'error'); return; }
+  if (!phone) { _epMsg('Phone number is required.', 'error'); return; }
+
+  btn.textContent = 'Saving…'; btn.disabled = true;
+
+  // Update profiles table
+  const profilePayload = { full_name: name, phone };
+  if (pass) profilePayload.has_password = true;
+
+  const { error: dbErr } = await sb.from('profiles').update(profilePayload).eq('id', currentUser.id);
+  if (dbErr) { btn.textContent = 'Save Changes'; btn.disabled = false; _epMsg(dbErr.message || 'Failed to save.', 'error'); return; }
+
+  // Update auth user metadata
+  const metaUpdate = { data: { full_name: name, phone } };
+  if (pass) {
+    if (pass.length < 4) { btn.textContent = 'Save Changes'; btn.disabled = false; _epMsg('Password must be at least 4 characters.', 'error'); return; }
+    metaUpdate.password = pass;
+    metaUpdate.data.has_password = true;
+  }
+  const { error: authErr } = await sb.auth.updateUser(metaUpdate);
+  if (authErr) { btn.textContent = 'Save Changes'; btn.disabled = false; _epMsg(authErr.message || 'Profile saved but password update failed.', 'error'); return; }
+
+  btn.textContent = 'Save Changes'; btn.disabled = false;
+
+  // Update sidebar display name
+  const nameEl = document.querySelector('.profile-name');
+  const avEl   = document.querySelector('.profile-av');
+  if (nameEl) nameEl.textContent = name;
+  if (avEl)   avEl.textContent   = name.slice(0,2).toUpperCase();
+
+  _epMsg('Profile updated successfully!', 'success');
+}
+
+function _epMsg(text, type) {
+  const el = document.getElementById('edit-prof-msg');
+  if (!el) return;
+  el.textContent = text;
+  el.style.display = 'block';
+  el.style.background = type === 'success' ? 'rgba(0,200,100,0.12)' : 'rgba(255,60,60,0.12)';
+  el.style.color      = type === 'success' ? '#00c864'              : '#ff6b6b';
+  el.style.border     = `1px solid ${type === 'success' ? 'rgba(0,200,100,0.3)' : 'rgba(255,60,60,0.3)'}`;
 }
 
 /* ── OTP inputs ── */
