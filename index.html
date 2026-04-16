@@ -10,7 +10,7 @@
      Bump SITE_V on every deploy so users automatically get the fresh version. -->
 <script>
 !function(){
-  var SITE_V='merito_20260416_15';
+  var SITE_V='merito_20260416_16';
   if(localStorage.getItem('_sv')!==SITE_V){
     localStorage.setItem('_sv',SITE_V);
     // Hard reload bypasses disk cache and fetches fresh from server
@@ -2504,16 +2504,17 @@ let _paySettings = {
 window.addEventListener('DOMContentLoaded', async () => {
   go('home'); // show navbar immediately
 
-  // Explicitly restore session — more reliable than waiting for INITIAL_SESSION event
+  // Restore session directly from localStorage — instant, no network, same
+  // approach the admin panel uses. Supabase stores the session under a known key.
   try {
-    const { data: { session } } = await sb.auth.getSession();
-    if (session && !currentUser) {
-      currentUser = session.user;
-      upsertProfile(currentUser);
+    const _lsKey = 'sb-' + SUPABASE_URL.replace('https://','').split('.')[0] + '-auth-token';
+    const _stored = JSON.parse(localStorage.getItem(_lsKey) || 'null');
+    if (_stored?.user && !currentUser) {
+      currentUser = _stored.user;
       updateNavUI(true);
       loadNotifications();
     }
-  } catch(e) { /* session not available, stay logged out */ }
+  } catch(e) {}
 
   await Promise.all([loadSiteText(), loadCourses()]);
 });
