@@ -51,12 +51,20 @@
 html{scroll-behavior:smooth;}
 body{
   background-color:var(--bg);
-  /* Ocoya-style dot grid */
-  background-image: radial-gradient(circle, rgba(255,255,255,0.055) 1px, transparent 1px);
-  background-size: 28px 28px;
-  background-attachment: fixed;
   color:var(--text);font-family:var(--font);font-size:15px;line-height:1.6;overflow-x:hidden;min-height:100vh;
+  position:relative;
 }
+/* Dot grid as a fixed layer behind everything — not covered by section backgrounds */
+body::before{
+  content:'';
+  position:fixed;inset:0;
+  background-image:radial-gradient(circle, rgba(255,255,255,0.07) 1px, transparent 1px);
+  background-size:28px 28px;
+  pointer-events:none;
+  z-index:0;
+}
+/* Ensure all stacked content sits above the dot layer */
+.nav,.page,.mob-nav{position:relative;z-index:1;}
 
 /* PAGES */
 .page{display:none;min-height:100vh;}
@@ -607,7 +615,7 @@ h2{
   play btn: w=72 h=72 rx=36 fill=white
   CTA: x=851 w=210 h=57.2 rx=9 fill=#4A00B1
 ═══════════════════════*/
-.about-section{background:var(--bg);padding:80px 80px;}
+.about-section{background:transparent;padding:80px 80px;}
 .about-grid{display:grid;grid-template-columns:620px 1fr;gap:60px;align-items:center;}
 .about-video{
   width:100%;aspect-ratio:16/9;
@@ -650,7 +658,7 @@ h2{
   avatar: w=70 h=70 rx=35 (circle)
   social btn: w=59 h=59 rx=29.5 stroke=#DEC7FF
 ═══════════════════════*/
-.testi-section{background:var(--bg);padding:80px 80px;}
+.testi-section{background:transparent;padding:80px 80px;}
 .testi-grid{
   display:grid;grid-template-columns:repeat(3,1fr);gap:24px;
   align-items:start;
@@ -2477,16 +2485,13 @@ window.addEventListener('DOMContentLoaded', async () => {
 });
 
 /* ── Ocoya-style scroll-shrink navbar ── */
-(function(){
-  let lastY = 0;
-  window.addEventListener('scroll', () => {
-    const nav = document.getElementById('main-nav');
-    if (!nav) return;
-    const y = window.scrollY;
-    nav.classList.toggle('scrolled', y > 50);
-    lastY = y;
-  }, { passive: true });
-})();
+function _applyNavScroll() {
+  const nav = document.getElementById('main-nav');
+  if (!nav) return;
+  nav.classList.toggle('scrolled', window.scrollY > 50);
+}
+window.addEventListener('scroll', _applyNavScroll, { passive: true });
+document.addEventListener('scroll', _applyNavScroll, { passive: true });
 
 /* ── Load site text from site_settings ── */
 async function loadSiteText() {
@@ -3786,6 +3791,8 @@ function go(page) {
   if (!el) return;
   el.classList.add('active');
   window.scrollTo({top:0,behavior:'smooth'});
+  // Reset nav to expanded state on every page change (page starts at top)
+  setTimeout(() => { const n = document.getElementById('main-nav'); if(n) n.classList.remove('scrolled'); }, 50);
   const noNav = ['login', 'register', 'verify'];
   document.getElementById('main-nav').style.display = noNav.includes(page) ? 'none' : 'flex';
   document.getElementById('mob-nav').style.display  = noNav.includes(page) ? 'none' : 'block';
