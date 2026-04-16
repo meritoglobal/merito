@@ -10,7 +10,7 @@
      Bump SITE_V on every deploy so users automatically get the fresh version. -->
 <script>
 !function(){
-  var SITE_V='merito_20260416_12';
+  var SITE_V='merito_20260416_13';
   if(localStorage.getItem('_sv')!==SITE_V){
     localStorage.setItem('_sv',SITE_V);
     // Hard reload bypasses disk cache and fetches fresh from server
@@ -2620,15 +2620,12 @@ function extractYTId(url) {
 /* ── Auth state listener ── */
 sb.auth.onAuthStateChange(async (event, session) => {
   if (event === 'INITIAL_SESSION') {
-    // Page refresh — restore session silently without navigating
+    // Page refresh — restore session silently, never navigate away
     if (!session) return; // not logged in
     currentUser = session.user;
-    await upsertProfile(currentUser);
+    upsertProfile(currentUser); // fire-and-forget, don't block
     updateNavUI(true);
     loadNotifications();
-    // If profile is incomplete, force setup even on refresh
-    const complete = await checkProfileComplete(currentUser);
-    if (!complete) showProfileSetup(currentUser);
 
   } else if (event === 'SIGNED_IN') {
     currentUser = session.user;
