@@ -10,7 +10,7 @@
      Bump SITE_V on every deploy so users automatically get the fresh version. -->
 <script>
 !function(){
-  var SITE_V='merito_20260416_11';
+  var SITE_V='merito_20260416_12';
   if(localStorage.getItem('_sv')!==SITE_V){
     localStorage.setItem('_sv',SITE_V);
     // Hard reload bypasses disk cache and fetches fresh from server
@@ -2502,9 +2502,8 @@ let _paySettings = {
 
 /* ── On page load ── */
 window.addEventListener('DOMContentLoaded', async () => {
-  loadSiteText();
-  go('home');          // show navbar & page immediately, never blocked
-  await loadCourses(); // populate courses in background
+  go('home');                                    // show navbar immediately
+  await Promise.all([loadSiteText(), loadCourses()]); // load both in parallel
   // Session is restored by onAuthStateChange INITIAL_SESSION below
 });
 
@@ -2984,8 +2983,22 @@ async function handleEmailSubmit() {
   const btn = document.getElementById('btn-email-continue');
   btn.textContent = 'Checking…'; btn.disabled = true;
 
-  // Check if email already exists in profiles
-  const { data: profile } = await sb.from('profiles').select('id').eq('email', email).maybeSingle();
+  // Check if email already exists in profiles (10s timeout guard)
+  let profile = null;
+  try {
+    const _timeout = new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 10000));
+    const { data } = await Promise.race([
+      sb.from('profiles').select('id').eq('email', email).maybeSingle(),
+      _timeout
+    ]);
+    profile = data;
+  } catch (e) {
+    btn.textContent = 'Continue'; btn.disabled = false;
+    errBox.textContent = e.message === 'timeout'
+      ? 'Connection timed out — please check your internet and try again.'
+      : (e.message || 'Something went wrong. Please try again.');
+    errBox.style.display = 'block'; return;
+  }
 
   btn.textContent = 'Continue'; btn.disabled = false;
   _authEmail = email;
