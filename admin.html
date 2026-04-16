@@ -3614,16 +3614,19 @@ async function adminChangeUserPassword() {
 
   // 2. Send email notification
   let emailSent = false;
+  let emailError = '';
   if (EMAILJS_PUBLIC_KEY !== 'YOUR_EMAILJS_PUBLIC_KEY') {
     try {
-      await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
+      const ejsResult = await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
         to_email:     userEmail,
         to_name:      userName,
         new_password: pass
       });
+      console.log('EmailJS response:', ejsResult);
       emailSent = true;
     } catch(e) {
-      console.warn('EmailJS send failed:', e);
+      emailError = e?.text || e?.message || JSON.stringify(e);
+      console.error('EmailJS send failed:', e);
     }
   }
 
@@ -3633,12 +3636,11 @@ async function adminChangeUserPassword() {
 
   if (emailSent) {
     successEl.textContent = '✓ Password updated & email sent to ' + userEmail;
+    successEl.style.color = '';
     successEl.style.display = 'block';
   } else {
-    // EmailJS not configured — show the password in a visible alert so admin can relay it
-    successEl.textContent = '✓ Password updated! (Email not configured — new password: ' + pass + ')';
+    successEl.innerHTML = '✓ Password updated!<br><span style="color:#E65100">⚠ Email failed to send: ' + (emailError || 'EmailJS not configured') + '</span>';
     successEl.style.display = 'block';
-    successEl.style.color = '#E65100';
   }
   toast('Password changed for ' + userName, 'success');
 }
