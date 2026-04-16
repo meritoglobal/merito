@@ -3,10 +3,21 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<!-- Prevent browser from caching stale HTML versions -->
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
+<!-- Version check: forces hard reload when browser serves stale cached HTML.
+     Bump SITE_V on every deploy so users automatically get the fresh version. -->
+<script>
+!function(){
+  var SITE_V='merito_20260416_10';
+  if(localStorage.getItem('_sv')!==SITE_V){
+    localStorage.setItem('_sv',SITE_V);
+    // Hard reload bypasses disk cache and fetches fresh from server
+    location.reload(true);
+  }
+}();
+</script>
 <title>Merito — Let's Crack It!</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
