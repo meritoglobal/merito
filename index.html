@@ -10,7 +10,7 @@
      Bump SITE_V on every deploy so users automatically get the fresh version. -->
 <script>
 !function(){
-  var SITE_V='merito_20260416_16';
+  var SITE_V='merito_20260416_17';
   if(localStorage.getItem('_sv')!==SITE_V){
     localStorage.setItem('_sv',SITE_V);
     // Hard reload bypasses disk cache and fetches fresh from server
@@ -3412,8 +3412,18 @@ async function handleGoogleLogin() {
    LOGOUT
 ══════════════════════════════════════════════ */
 async function handleLogout() {
-  await sb.auth.signOut();
+  // Clear state immediately so UI updates without waiting for network
+  currentUser = null;
+  activeCart  = [];
+  updateNavUI(false);
+  // Clear the localStorage session key directly (same key our restore reads from)
+  try {
+    const _lsKey = 'sb-' + SUPABASE_URL.replace('https://','').split('.')[0] + '-auth-token';
+    localStorage.removeItem(_lsKey);
+  } catch(e) {}
   go('home');
+  // Sign out from Supabase in background
+  sb.auth.signOut().catch(() => {});
 }
 
 /* ══════════════════════════════════════════════
@@ -3683,7 +3693,8 @@ async function openCoursePlayer(courseId) {
   document.getElementById('cp-course-title').textContent = c ? c.title : 'Course';
 
   // Navigate to the player page
-  go('course-player');
+  history.pushState({ page: 'learn', courseId }, '', '#learn/' + courseId);
+  go('course-player', true); // skip go()'s own history push
 
   // Reset viewer
   document.getElementById('cp-viewer').innerHTML = `
@@ -3786,6 +3797,10 @@ function _playCPById(id) {
 }
 
 function _playCPItem(item) {
+  // Update URL to reflect the specific lesson
+  history.replaceState({ page: 'learn', courseId: _cpCourseId, itemId: item.id }, '',
+    '#learn/' + _cpCourseId + '/' + item.id);
+
   // Mark active in sidebar
   document.querySelectorAll('.cp-item-row').forEach(r => r.classList.remove('active-item'));
   const row = document.getElementById('cprow-' + item.id);
@@ -3923,41 +3938,47 @@ function courseCard(c) {
 /* ══════════════════════════════════════════════
    ROUTING
 ══════════════════════════════════════════════ */
-function go(page) {
+const _pageHashes = {
+  'home': '', 'courses': 'courses', 'books': 'books', 'blogs': 'blogs',
+  'login': 'login', 'register': 'register', 'profile': 'profile',
+  'cart': 'cart', 'order-track': 'orders', 'payment': 'payment', 'verify': 'verify'
+};
+
+function go(page, _skipHistory) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   const el = document.getElementById('page-'+page);
   if (!el) return;
   el.classList.add('active');
   window.scrollTo({top:0,behavior:'smooth'});
-  // Reset nav to expanded state on every page change (page starts at top)
   setTimeout(() => { const w = document.getElementById('main-nav-wrap'); if(w) w.classList.remove('scrolled'); }, 50);
   const noNav = ['login', 'register', 'verify'];
   document.getElementById('main-nav-wrap').style.display = noNav.includes(page) ? 'none' : 'block';
   document.getElementById('mob-nav').style.display  = noNav.includes(page) ? 'none' : 'block';
-  setTimeout(() => {
-    el.querySelectorAll('.reveal').forEach(r => r.classList.add('on'));
-  }, 80);
-  // Side effects when navigating to certain pages
+  setTimeout(() => { el.querySelectorAll('.reveal').forEach(r => r.classList.add('on')); }, 80);
   if (page === 'profile') loadProfileData();
   if (page === 'order-track') loadOrderHistory();
   if (page === 'cart') renderCart();
   if (page === 'payment') _renderPayInfo(activePaymentMethod);
   if (page === 'login') {
-    // Always reset to email step
     document.getElementById('login-step-email').style.display = 'block';
     document.getElementById('login-step-pass').style.display  = 'none';
     document.getElementById('login-error').style.display      = 'none';
     document.getElementById('login-email').value = '';
   }
-  // Hide nav for course-player (full-screen experience)
   if (page === 'course-player') {
     document.getElementById('main-nav-wrap').style.display = 'none';
     document.getElementById('mob-nav').style.display  = 'none';
+  }
+  // Update URL for SEO / bookmarking / back-button
+  if (!_skipHistory && page in _pageHashes) {
+    const hash = _pageHashes[page];
+    history.pushState({ page }, '', hash ? '#' + hash : location.pathname + location.search);
   }
 }
 
 function openCourse(id) {
   currentCourseId = id;
+  history.pushState({ page: 'course', id }, '', '#course/' + id);
   const c = COURSES.find(x => x.id === id);
   if (c) {
     document.getElementById('det-bc').textContent    = c.title;
@@ -4264,16 +4285,11 @@ function buildCourseDropdown() {
 
 /* ── Navigate to courses page with optional category filter ── */
 function goCat(cat) {
-  // Update URL hash for distinct links
   const hash = cat === 'all' ? '#courses' : '#courses/' + cat;
-  history.replaceState(null, '', hash);
-  go('courses');
-  // Apply filter after the page switch
+  history.pushState({ page: 'courses', cat }, '', hash);
+  go('courses', true); // skip go()'s own pushState
   activeCatFilter = cat;
-  setTimeout(() => {
-    buildCourseFilters();
-    applyCourseView();
-  }, 0);
+  setTimeout(() => { buildCourseFilters(); applyCourseView(); }, 0);
 }
 
 /* ── Filter ── */
@@ -4310,19 +4326,40 @@ function applyCourseView() {
 }
 
 /* ── Handle hash-based navigation (back/forward + direct links) ── */
-function handleCourseHash() {
-  const hash = window.location.hash;
-  if (hash.startsWith('#courses')) {
-    const parts = hash.split('/');
-    const cat = parts[1] || 'all';
-    activeCatFilter = cat;
-    buildCourseFilters();
-    applyCourseView();
-  }
+function handleHashNav() {
+  const hash  = window.location.hash.slice(1); // strip leading #
+  const parts = hash.split('/');
+  const root  = parts[0];
+
+  if (!hash || root === 'home') {
+    go('home', true);
+  } else if (root === 'courses') {
+    activeCatFilter = parts[1] || 'all';
+    go('courses', true);
+    setTimeout(() => {
+      buildCourseFilters();
+      applyCourseView();
+    }, 50);
+  } else if (root === 'course' && parts[1]) {
+    const id = parseInt(parts[1]);
+    if (!isNaN(id)) openCourse(id);
+  } else if (root === 'learn' && parts[1]) {
+    const cid = parseInt(parts[1]);
+    if (!isNaN(cid)) {
+      openCoursePlayer(cid).then(() => {
+        if (parts[2]) setTimeout(() => _playCPById(parts[2]), 500);
+      });
+    }
+  } else if (root === 'books')    { go('books', true); }
+  else if (root === 'blogs')      { go('blogs', true); }
+  else if (root === 'profile')    { if (currentUser) go('profile', true); else go('login', true); }
+  else if (root === 'cart')       { go('cart', true); }
+  else if (root === 'orders')     { go('order-track', true); }
+  else if (root === 'login')      { go('login', true); }
 }
-window.addEventListener('hashchange', () => {
-  if (window.location.hash.startsWith('#courses')) handleCourseHash();
-});
+
+window.addEventListener('hashchange', handleHashNav);
+window.addEventListener('popstate',   handleHashNav);
 
 /* ── Payment method selector ── */
 function selPM(el, method) {
