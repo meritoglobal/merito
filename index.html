@@ -10,7 +10,7 @@
      Bump SITE_V on every deploy so users automatically get the fresh version. -->
 <script>
 !function(){
-  var SITE_V='merito_20260416_21';
+  var SITE_V='merito_20260416_22';
   if(localStorage.getItem('_sv')!==SITE_V){
     localStorage.setItem('_sv',SITE_V);
     // Hard reload bypasses disk cache and fetches fresh from server
@@ -1103,6 +1103,18 @@ footer{
   flex-shrink:0;white-space:nowrap;
 }
 .curb-ct-badge-lock{font-size:14px;flex-shrink:0;opacity:.5;}
+.curb-content-item.fp-free{cursor:pointer;}
+.curb-content-item.fp-free:hover{background:rgba(0,194,94,0.06);border-left:3px solid #00C25E;padding-left:45px;}
+/* ── Free Preview Player ── */
+#fp-progress-bar:hover #fp-progress-fill::after{transform:scale(1);}
+.fp-ctrl-btn{background:none;border:none;color:#ccc;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:color .15s;}
+.fp-ctrl-btn:hover{color:#fff;}
+.fp-skip-btn{width:42px;height:42px;border-radius:50%;background:rgba(255,255,255,0.1);border:1.5px solid rgba(255,255,255,0.25);color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .15s;flex-shrink:0;}
+.fp-skip-btn:hover{background:rgba(255,255,255,0.2);}
+.fp-play-btn{width:48px;height:48px;border-radius:50%;background:#fff;border:none;color:#000;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:transform .1s;}
+.fp-play-btn:hover{transform:scale(1.08);}
+.fp-speed-sel{background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);color:#fff;padding:4px 8px;border-radius:5px;font-size:12px;cursor:pointer;outline:none;}
+.fp-speed-sel option{background:#222;color:#fff;}
 
 /* ── Course detail scroll sections ── */
 .det-section{margin-bottom:40px;padding-bottom:32px;border-bottom:1px solid rgba(74,0,177,0.1);}
@@ -2412,6 +2424,75 @@ footer{
       <div class="cp-sidebar-scroll" id="cp-sidebar-list">
         <div class="cp-empty"><div class="cp-empty-icon">📂</div><div style="font-size:14px;">Loading content…</div></div>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     FREE CONTENT PREVIEW PLAYER
+══════════════════════════════════════════════ -->
+<div id="free-preview-overlay" onclick="if(event.target===this)closeFreePreview()"
+  style="display:none;position:fixed;inset:0;z-index:3000;background:rgba(0,0,0,0.9);backdrop-filter:blur(8px);align-items:center;justify-content:center;padding:16px;">
+  <div style="width:min(820px,96vw);background:#111;border-radius:12px;overflow:hidden;box-shadow:0 32px 100px rgba(0,0,0,0.8);">
+    <!-- Header bar -->
+    <div style="display:flex;align-items:center;gap:12px;padding:12px 16px;background:#1a1a1a;border-bottom:1px solid #2a2a2a;">
+      <span style="font-size:11px;font-weight:800;color:#00C25E;letter-spacing:.08em;background:rgba(0,194,94,0.12);padding:2px 8px;border-radius:10px;flex-shrink:0;">FREE</span>
+      <div id="fp-title" style="flex:1;font-size:14px;font-weight:600;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"></div>
+      <button onclick="closeFreePreview()" class="fp-ctrl-btn" style="font-size:22px;width:32px;height:32px;" title="Close">×</button>
+    </div>
+    <!-- Video player -->
+    <div id="fp-video-wrap">
+      <div style="position:relative;padding-top:56.25%;background:#000;">
+        <div id="fp-ytplayer" style="position:absolute;inset:0;width:100%;height:100%;"></div>
+      </div>
+      <!-- Controls bar -->
+      <div style="background:#1a1a1a;padding:10px 16px 14px;">
+        <!-- Progress bar -->
+        <div id="fp-progress-bar" onclick="fpSeek(event)"
+          style="height:5px;background:#333;border-radius:3px;cursor:pointer;margin-bottom:12px;position:relative;group;">
+          <div id="fp-progress-fill" style="height:100%;background:#f00;border-radius:3px;width:0%;position:relative;pointer-events:none;transition:width .1s linear;">
+            <div style="position:absolute;right:-6px;top:-3.5px;width:11px;height:11px;background:#f00;border-radius:50%;box-shadow:0 0 4px rgba(255,0,0,0.6);"></div>
+          </div>
+        </div>
+        <!-- Buttons row -->
+        <div style="display:flex;align-items:center;gap:10px;">
+          <!-- Back 10s -->
+          <button onclick="fpSkip(-10)" class="fp-skip-btn" title="Back 10 seconds">
+            <svg width="22" height="22" viewBox="0 0 22 22" fill="none"><path d="M11 3.5A7.5 7.5 0 1 0 5 6.8" stroke="white" stroke-width="1.8" stroke-linecap="round"/><path d="M5 3v4h4" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><text x="11" y="15" text-anchor="middle" fill="white" font-size="6.5" font-weight="bold" font-family="Arial,sans-serif">10</text></svg>
+          </button>
+          <!-- Play/Pause -->
+          <button id="fp-play-btn" onclick="fpTogglePlay()" class="fp-play-btn" title="Play / Pause">
+            <svg width="16" height="18" viewBox="0 0 16 18" fill="black"><path d="M1 1l14 8L1 17V1z"/></svg>
+          </button>
+          <!-- Forward 10s -->
+          <button onclick="fpSkip(10)" class="fp-skip-btn" title="Forward 10 seconds">
+            <svg width="22" height="22" viewBox="0 0 22 22" fill="none"><path d="M11 3.5A7.5 7.5 0 1 1 17 6.8" stroke="white" stroke-width="1.8" stroke-linecap="round"/><path d="M17 3v4h-4" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><text x="11" y="15" text-anchor="middle" fill="white" font-size="6.5" font-weight="bold" font-family="Arial,sans-serif">10</text></svg>
+          </button>
+          <!-- Time display -->
+          <div style="color:#aaa;font-size:13px;flex:1;font-variant-numeric:tabular-nums;letter-spacing:.01em;">
+            <span id="fp-time-cur">0:00</span><span style="opacity:.5;margin:0 4px;">/</span><span id="fp-time-dur">0:00</span>
+          </div>
+          <!-- Volume toggle -->
+          <button id="fp-vol-btn" onclick="fpToggleMute()" class="fp-ctrl-btn" style="font-size:18px;" title="Mute/Unmute">🔊</button>
+          <!-- Speed -->
+          <select id="fp-speed-sel" onchange="fpSetSpeed(this.value)" class="fp-speed-sel">
+            <option value="0.5">0.5×</option>
+            <option value="0.75">0.75×</option>
+            <option value="1" selected>1×</option>
+            <option value="1.25">1.25×</option>
+            <option value="1.5">1.5×</option>
+            <option value="2">2×</option>
+          </select>
+          <!-- Fullscreen -->
+          <button onclick="fpFullscreen()" class="fp-ctrl-btn" style="font-size:18px;" title="Fullscreen">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+    <!-- PDF viewer -->
+    <div id="fp-pdf-wrap" style="display:none;">
+      <iframe id="fp-pdf-iframe" src="" style="width:100%;height:72vh;border:none;display:block;"></iframe>
     </div>
   </div>
 </div>
