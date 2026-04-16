@@ -10,7 +10,7 @@
      Bump SITE_V on every deploy so users automatically get the fresh version. -->
 <script>
 !function(){
-  var SITE_V='merito_20260416_17';
+  var SITE_V='merito_20260416_18';
   if(localStorage.getItem('_sv')!==SITE_V){
     localStorage.setItem('_sv',SITE_V);
     // Hard reload bypasses disk cache and fetches fresh from server
@@ -1363,6 +1363,7 @@ footer{
 .order-status{font-size:12px;font-weight:700;padding:4px 12px;border-radius:100px;}
 .status-ok{background:rgba(0,196,94,0.12);color:#00C25E;}
 .status-wait{background:rgba(252,174,48,0.12);color:#FCAE30;}
+.status-bad{background:rgba(255,60,60,0.12);color:#ff6b6b;}
 
 /*═══════════════════════
   MOBILE NAV (bottom)
@@ -2287,28 +2288,10 @@ footer{
     <h2>Order History</h2>
     <p class="sec-sub">Track your course purchases and enrollment status</p>
     <div class="order-hero">
-      <div class="order-track-inner">
-        <div class="order-step-row">
-          <div class="order-step-icon">📊</div>
-          <div class="order-step-info">
-            <div class="order-step-title">IBA MBA Admission 2026</div>
-            <div class="order-step-sub">Order #MBD-20260408-001 • Apr 8, 2026 • ৳2,500</div>
-          </div>
-          <span class="order-status status-ok">✓ Enrolled</span>
-        </div>
-        <div class="order-step-row">
-          <div class="order-step-icon">📝</div>
-          <div class="order-step-info">
-            <div class="order-step-title">IELTS Hero — Complete Course</div>
-            <div class="order-step-sub">Order #MBD-20260408-002 • Apr 8, 2026 • ৳3,000</div>
-          </div>
-          <span class="order-status status-wait">⏳ Under Review</span>
-        </div>
+      <div class="order-track-inner" id="order-track-list">
+        <p style="color:var(--text-dim);font-size:14px;padding:20px 0;">Loading orders…</p>
       </div>
-      <div style="background:rgba(0,196,94,0.08);border:1px solid rgba(0,196,94,0.25);border-radius:8px;padding:18px;margin-top:16px;">
-        <div style="font-size:14px;font-weight:800;color:#00C25E;margin-bottom:6px;">✓ Payment Received</div>
-        <p style="font-size:13px;color:var(--text-mid);">Your payment has been verified. You'll be enrolled in all courses within 2 hours. Our team will contact you at your registered number.</p>
-      </div>
+      <div id="order-track-banner" style="display:none;margin-top:16px;"></div>
     </div>
   </div>
 </div>
@@ -3603,32 +3586,81 @@ async function handlePaymentConfirm() {
 async function loadOrderHistory() {
   if (!currentUser) return;
 
-  const { data: orders, error } = await sb
-    .from('orders')
-    .select('*, courses(title, icon)')
-    .eq('user_id', currentUser.id)
-    .order('created_at', { ascending: false });
+  const list   = document.getElementById('order-track-list');
+  const banner = document.getElementById('order-track-banner');
+  if (!list) return;
 
-  const trackInner = document.querySelector('.order-track-inner');
-  if (!trackInner) return;
+  list.innerHTML = '<p style="color:var(--text-dim);font-size:14px;padding:20px 0;">Loading…</p>';
+  if (banner) banner.style.display = 'none';
 
-  if (error || !orders || orders.length === 0) {
-    trackInner.innerHTML = '<p style="color:var(--text-dim);font-size:14px;padding:20px 0;">No orders yet.</p>';
+  // Load orders + actual enrollments in parallel
+  const [ordersRes, enrollRes] = await Promise.all([
+    sb.from('orders').select('*, courses(title, icon)').eq('user_id', currentUser.id).order('created_at', { ascending: false }),
+    sb.from('course_enrollments').select('course_id').eq('user_email', currentUser.email)
+  ]);
+
+  const orders      = ordersRes.data || [];
+  const enrolledIds = new Set((enrollRes.data || []).map(e => String(e.course_id)));
+
+  // Skip cart-only entries (user never paid)
+  const visible = orders.filter(o => o.status !== 'cart');
+
+  if (!visible.length) {
+    list.innerHTML = '<p style="color:var(--text-dim);font-size:14px;padding:20px 0;">No orders yet.</p>';
     return;
   }
 
-  const statusMap   = { pending: '⏳ Under Review', verified: '✓ Enrolled', rejected: '✗ Rejected' };
-  const statusClass = { pending: 'status-wait',     verified: 'status-ok',   rejected: 'status-wait' };
+  const fmt = d => new Date(d).toLocaleDateString('en-GB', { day:'numeric', month:'short', year:'numeric' });
 
-  trackInner.innerHTML = orders.map(o => `
+  list.innerHTML = visible.map(o => {
+    // Enrollment check takes priority over order status
+    const isEnrolled = enrolledIds.has(String(o.course_id));
+    let label, cls;
+    if (isEnrolled) {
+      label = '✓ Enrolled'; cls = 'status-ok';
+    } else {
+      switch (o.status) {
+        case 'verified':      label = '✓ Payment Verified'; cls = 'status-ok';   break;
+        case 'almost_bought': label = '💳 Payment Submitted'; cls = 'status-wait'; break;
+        case 'pending':       label = '⏳ Under Review';      cls = 'status-wait'; break;
+        case 'rejected':      label = '✗ Rejected';          cls = 'status-bad';  break;
+        default:              label = '⏳ Pending';           cls = 'status-wait';
+      }
+    }
+    return `
     <div class="order-step-row">
       <div class="order-step-icon">${o.courses?.icon || '📚'}</div>
       <div class="order-step-info">
         <div class="order-step-title">${o.courses?.title || 'Course'}</div>
-        <div class="order-step-sub">Order #${o.order_ref} • ৳${Number(o.amount).toLocaleString()}</div>
+        <div class="order-step-sub">Order #${o.order_ref || o.id} • ${fmt(o.created_at)} • ৳${Number(o.amount||0).toLocaleString()}</div>
       </div>
-      <span class="order-status ${statusClass[o.status] || 'status-wait'}">${statusMap[o.status] || '⏳ Pending'}</span>
-    </div>`).join('');
+      <span class="order-status ${cls}">${label}</span>
+    </div>`;
+  }).join('');
+
+  // Show relevant banner based on highest-priority status
+  if (banner) {
+    const hasEnrolled  = visible.some(o => enrolledIds.has(String(o.course_id)) || o.status === 'verified');
+    const hasRejected  = visible.some(o => o.status === 'rejected');
+    const hasPending   = visible.some(o => ['almost_bought','pending'].includes(o.status));
+
+    if (hasEnrolled) {
+      banner.style.display = 'block';
+      banner.innerHTML = `<div style="background:rgba(0,196,94,0.08);border:1px solid rgba(0,196,94,0.25);border-radius:8px;padding:18px;">
+        <div style="font-size:14px;font-weight:800;color:#00C25E;margin-bottom:6px;">✓ Payment Received</div>
+        <p style="font-size:13px;color:var(--text-mid);margin:0;">Your payment has been verified. Access your enrolled courses from <span onclick="go('profile')" style="color:var(--text-acc);cursor:pointer;">My Profile → My Courses</span>.</p></div>`;
+    } else if (hasRejected) {
+      banner.style.display = 'block';
+      banner.innerHTML = `<div style="background:rgba(255,60,60,0.08);border:1px solid rgba(255,60,60,0.25);border-radius:8px;padding:18px;">
+        <div style="font-size:14px;font-weight:800;color:#ff6b6b;margin-bottom:6px;">✗ Order Rejected</div>
+        <p style="font-size:13px;color:var(--text-mid);margin:0;">One or more orders were rejected. Please contact support or re-submit your payment.</p></div>`;
+    } else if (hasPending) {
+      banner.style.display = 'block';
+      banner.innerHTML = `<div style="background:rgba(255,165,0,0.08);border:1px solid rgba(255,165,0,0.25);border-radius:8px;padding:18px;">
+        <div style="font-size:14px;font-weight:800;color:#ffa500;margin-bottom:6px;">⏳ Under Review</div>
+        <p style="font-size:13px;color:var(--text-mid);margin:0;">Your payment is being reviewed. You'll receive access once verified — usually within a few hours.</p></div>`;
+    }
+  }
 }
 
 /* ══════════════════════════════════════════════
