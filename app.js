@@ -1322,32 +1322,46 @@ async function loadCourseContent(courseId) {
 
 function _renderCPSidebar(items) {
   const list = document.getElementById('cp-sidebar-list');
-  // Group by section
-  const sections = {};
-  const sectionOrder = [];
+  // Build 3-level tree: section → subsection (or null) → items
+  const secMap = new Map(), secOrder = [];
   items.forEach(item => {
-    const sec = item.section_label || item.section_title || 'Lessons';
-    if (!sections[sec]) { sections[sec] = []; sectionOrder.push(sec); }
-    sections[sec].push(item);
+    const sl  = item.section_label    || 'Lessons';
+    const sub = item.subsection_label || null;
+    if (!secMap.has(sl)) { secMap.set(sl, new Map()); secOrder.push(sl); }
+    const subMap = secMap.get(sl);
+    const subKey = sub || '__direct__';
+    if (!subMap.has(subKey)) subMap.set(subKey, []);
+    subMap.get(subKey).push(item);
   });
 
+  function _row(item) {
+    const done     = !!_cpCompleted[item.id];
+    const itype    = item.content_type || 'link';
+    const iname    = item.content_name || 'Untitled';
+    const meta     = _cpItemMeta(itype);
+    const duration = item.duration ? `<span style="font-size:10px;color:var(--cp-muted,#888);margin-left:4px;">${item.duration}</span>` : '';
+    const freeBadge= item.is_free   ? `<span style="font-size:9px;font-weight:700;color:#22a;background:rgba(74,0,177,0.1);padding:1px 5px;border-radius:8px;margin-left:4px;">FREE</span>` : '';
+    return `<div class="cp-item-row" id="cprow-${item.id}" onclick="_playCPById('${item.id}')">
+      <div class="cp-irow-icon t-${itype}">${meta.icon}</div>
+      <div class="cp-irow-body">
+        <div class="cp-irow-name">${iname}${freeBadge}</div>
+        <div class="cp-irow-type">${meta.label}${duration}</div>
+      </div>
+      <div class="cp-irow-check ${done?'done':''}">${done?'✓':''}</div>
+    </div>`;
+  }
+
   let html = '';
-  sectionOrder.forEach(sec => {
-    html += `<div class="cp-section-head">${sec}</div>`;
-    sections[sec].forEach(item => {
-      const done = _cpCompleted[item.id] ? true : false;
-      const itype = item.content_type || item.type || 'link';
-      const iname = item.content_name || item.title || 'Untitled';
-      const typeInfo = _cpItemMeta(itype);
-      html += `
-        <div class="cp-item-row" id="cprow-${item.id}" onclick="_playCPById('${item.id}')">
-          <div class="cp-irow-icon t-${itype}">${typeInfo.icon}</div>
-          <div class="cp-irow-body">
-            <div class="cp-irow-name">${iname}</div>
-            <div class="cp-irow-type">${typeInfo.label}</div>
-          </div>
-          <div class="cp-irow-check ${done ? 'done' : ''}">${done ? '✓' : ''}</div>
-        </div>`;
+  secOrder.forEach(sl => {
+    const subMap = secMap.get(sl);
+    html += `<div class="cp-section-head">${sl}</div>`;
+    // Direct items first
+    if (subMap.has('__direct__')) subMap.get('__direct__').forEach(i => { html += _row(i); });
+    // Then subsections
+    subMap.forEach((subItems, subKey) => {
+      if (subKey === '__direct__') return;
+      html += `<div style="padding:6px 14px 2px;font-size:11px;font-weight:700;color:var(--primary);opacity:.75;letter-spacing:.04em;">${subKey}</div>`;
+      subItems.forEach(i => { html += _row(i); });
     });
   });
   list.innerHTML = html;

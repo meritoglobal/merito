@@ -1457,7 +1457,7 @@ tbody tr.drag-over td:first-child{
         <select class="form-select" id="cc-course-sel" style="max-width:260px;" onchange="loadCourseContentForCourse()">
           <option value="">— Select a course —</option>
         </select>
-        <button class="btn-add" id="cc-add-btn" onclick="openCCAddModal()" style="display:none;">+</button>
+        <button class="btn-primary" id="cc-save-btn" onclick="saveAllCourseContent()" style="display:none;padding:8px 18px;font-size:13px;white-space:nowrap;">💾 Save All</button>
       </div>
       <div id="cc-body">
         <div style="text-align:center;padding:60px 20px;color:var(--text-dim);font-size:14px;">Select a course above to manage its content.</div>
@@ -1992,12 +1992,6 @@ tbody tr.drag-over td:first-child{
         </div>
       </div>
 
-      <!-- ── Curriculum Builder ── -->
-      <div class="form-group">
-        <label class="form-label">Curriculum <span style="font-size:11px;font-weight:400;opacity:.6">(Sections → Subsections → Content)</span></label>
-        <div id="nc-curriculum" class="curriculum-builder"></div>
-        <button type="button" class="btn-add-row" onclick="addCurriculumSection('nc')">+ Add Section</button>
-      </div>
     </div>
     <div class="modal-footer">
       <button class="btn-secondary" onclick="closeModal('modal-add-course')">Cancel</button>
@@ -2189,67 +2183,6 @@ tbody tr.drag-over td:first-child{
 
 <!-- MCQ Category Manager Modal -->
 <!-- Add MCQ Item Modal -->
-<!-- Course Content Add Modal -->
-<div class="modal-overlay" id="modal-cc-add">
-  <div class="modal" style="max-width:540px;">
-    <div class="modal-head"><h3 id="cc-modal-head">Add Lesson</h3><button class="modal-close" onclick="closeModal('modal-cc-add')">×</button></div>
-    <div class="modal-body">
-      <input type="hidden" id="cc-edit-id">
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-        <!-- Type selector -->
-        <div class="form-group" style="grid-column:1/-1">
-          <label class="form-label">Content Type *</label>
-          <div style="display:flex;gap:8px;flex-wrap:wrap;" id="cc-type-btns">
-            <button class="cat-chip" onclick="setCCType('video',this)">🎬 Video</button>
-            <button class="cat-chip" onclick="setCCType('pdf',this)">📄 PDF</button>
-            <button class="cat-chip" onclick="setCCType('link',this)">🔗 Link</button>
-            <button class="cat-chip" onclick="setCCType('mcq',this)">📝 MCQ Exam</button>
-          </div>
-        </div>
-        <div class="form-group" style="grid-column:1/-1">
-          <label class="form-label">Lesson Name *</label>
-          <input class="form-input" id="cc-name" placeholder="e.g. Introduction to IELTS Writing">
-        </div>
-        <div class="form-group" style="grid-column:1/-1">
-          <label class="form-label">URL / Link *</label>
-          <input class="form-input" id="cc-url-direct" placeholder="YouTube URL, PDF link, or any URL…">
-          <div style="font-size:11px;color:var(--text-dim);margin-top:4px;">For YouTube videos, paste the full watch URL (youtube.com/watch?v=…)</div>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Section / Module</label>
-          <input class="form-input" id="cc-section" placeholder="e.g. Week 1, Module 2">
-        </div>
-        <div class="form-group">
-          <label class="form-label">Sort Order</label>
-          <input class="form-input" id="cc-sort-order" type="number" min="0" placeholder="0 = first">
-        </div>
-        <div class="form-group" style="grid-column:1/-1">
-          <label class="form-label">Description <span style="font-size:11px;font-weight:400;opacity:.6;">(optional)</span></label>
-          <textarea class="form-input" id="cc-description" rows="2" placeholder="Brief description of this lesson…"></textarea>
-        </div>
-        <!-- Legacy store picker (collapsed by default) -->
-        <div class="form-group" style="grid-column:1/-1">
-          <details>
-            <summary style="font-size:12px;color:var(--text-dim);cursor:pointer;user-select:none;">Or pick from existing store items…</summary>
-            <div style="margin-top:8px;">
-              <input class="form-input" id="cc-item-search" placeholder="Search items…" oninput="filterCCItems(this.value)" style="margin-bottom:6px;">
-              <div id="cc-item-list" style="border:1px solid var(--border);border-radius:8px;max-height:180px;overflow-y:auto;">
-                <div style="padding:14px;text-align:center;font-size:12px;color:var(--text-dim);">Select a content type above first.</div>
-              </div>
-              <input type="hidden" id="cc-selected-id">
-              <div id="cc-selected-preview" style="display:none;margin-top:6px;padding:7px 12px;background:rgba(74,0,177,0.1);border-radius:6px;font-size:12px;font-weight:600;color:var(--purple);"></div>
-            </div>
-          </details>
-        </div>
-      </div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn-secondary" onclick="closeModal('modal-cc-add')">Cancel</button>
-      <button class="btn-primary" onclick="saveCCItem()">Save Lesson</button>
-    </div>
-  </div>
-</div>
-
 <!-- ══ USER DETAIL / EDIT MODAL ══ -->
 <div class="modal-overlay" id="modal-user-detail">
   <div class="modal" style="max-width:640px;">
@@ -2438,13 +2371,6 @@ tbody tr.drag-over td:first-child{
           <button type="button" class="btn-add-row" onclick="addDescBlock('ec','text')">¶ Text Block</button>
           <button type="button" class="btn-add-row" style="background:#FFF9C4;border-color:#E65100;color:#E65100;" onclick="addDescBlock('ec','highlight')">★ Highlight Block</button>
         </div>
-      </div>
-
-      <!-- ── Curriculum Builder ── -->
-      <div class="form-group">
-        <label class="form-label">Curriculum <span style="font-size:11px;font-weight:400;opacity:.6">(Sections → Subsections → Content)</span></label>
-        <div id="ec-curriculum" class="curriculum-builder"></div>
-        <button type="button" class="btn-add-row" onclick="addCurriculumSection('ec')">+ Add Section</button>
       </div>
 
       <!-- ── Enrolled Students ── -->

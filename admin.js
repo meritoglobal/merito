@@ -2430,8 +2430,13 @@ async function loadStoreLinks() {
     </div></td></tr>`).join('');
 }
 
-/* ── COURSE CONTENT ── */
-let _ccType = null, _ccAllItems = [], _ccCourseContent = [];
+/* ── COURSE CONTENT (Inline Curriculum Builder) ── */
+let _ccSections = [];
+let _ccLidCtr = 0;
+const _ccTypeIcons  = { video:'▶', pdf:'📄', link:'🔗', picture:'🖼️' };
+const _ccTypeLabels = { video:'Video', pdf:'PDF', link:'Link', picture:'Picture' };
+function _ccLid() { return 'lid' + (++_ccLidCtr); }
+function _ccEsc(s) { return (s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
 function initCourseContent() {
   const sel = document.getElementById('cc-course-sel');
@@ -2441,237 +2446,186 @@ function initCourseContent() {
 
 async function loadCourseContentForCourse() {
   const courseId = document.getElementById('cc-course-sel').value;
-  const addBtn   = document.getElementById('cc-add-btn');
+  const saveBtn  = document.getElementById('cc-save-btn');
   const body     = document.getElementById('cc-body');
   if (!courseId) {
-    if (addBtn) addBtn.style.display = 'none';
+    if (saveBtn) saveBtn.style.display = 'none';
     body.innerHTML = '<div style="text-align:center;padding:60px 20px;color:var(--text-dim);font-size:14px;">Select a course above to manage its content.</div>';
     return;
   }
-  if (addBtn) addBtn.style.display = '';
+  if (saveBtn) saveBtn.style.display = '';
   body.innerHTML = '<div style="padding:20px;color:var(--text-dim);font-size:13px;">Loading…</div>';
   const { data } = await sb.from('course_content').select('*').eq('course_id', courseId).order('sort_order',{ascending:true}).order('created_at',{ascending:true});
-  _ccCourseContent = data || [];
-  renderCourseContent();
+  _ccSections = _dbRowsToSections(data || []);
+  renderCCBuilder();
 }
 
-function renderCourseContent() {
+function _dbRowsToSections(rows) {
+  const secMap = new Map(), secOrder = [];
+  rows.forEach(row => {
+    const sl = row.section_label || 'General';
+    if (!secMap.has(sl)) { secMap.set(sl, { _lid:_ccLid(), label:sl, directItems:[], subsections:new Map(), subOrder:[] }); secOrder.push(sl); }
+    const sec = secMap.get(sl);
+    const sub = row.subsection_label || null;
+    if (sub) {
+      if (!sec.subsections.has(sub)) { sec.subsections.set(sub,{_lid:_ccLid(),label:sub,items:[]}); sec.subOrder.push(sub); }
+      sec.subsections.get(sub).items.push(_rowToMemItem(row));
+    } else {
+      sec.directItems.push(_rowToMemItem(row));
+    }
+  });
+  return secOrder.map(sl => { const s=secMap.get(sl); return { _lid:s._lid, label:s.label, directItems:s.directItems, subsections:s.subOrder.map(sl2=>s.subsections.get(sl2)) }; });
+}
+function _rowToMemItem(row) {
+  return { _lid:_ccLid(), content_type:row.content_type||'video', content_name:row.content_name||'', content_url:row.content_url||'', duration:row.duration||'', is_free:row.is_free||false };
+}
+
+/* — State helpers — */
+function _ccGetSec(lid) { return _ccSections.find(s=>s._lid===lid); }
+function _ccGetSub(sLid,subLid) { return _ccGetSec(sLid)?.subsections.find(s=>s._lid===subLid); }
+function _ccGetItem(lid) {
+  for (const s of _ccSections) {
+    for (const i of s.directItems) if (i._lid===lid) return i;
+    for (const sub of s.subsections) for (const i of sub.items) if (i._lid===lid) return i;
+  }
+  return null;
+}
+
+/* — oninput handlers (no re-render, just mutate state) — */
+function ccSetSecLabel(lid,v)         { const s=_ccGetSec(lid); if(s) s.label=v; }
+function ccSetSubLabel(sLid,subLid,v) { const s=_ccGetSub(sLid,subLid); if(s) s.label=v; }
+function ccSetItemField(lid,field,v)  { const i=_ccGetItem(lid); if(i) i[field]=v; }
+
+/* — Type chip click (partial DOM update, no full re-render) — */
+function ccSetItemType(lid, type, el) {
+  const item = _ccGetItem(lid);
+  if (!item) return;
+  item.content_type = type;
+  const chipsWrap = el.closest('[data-chips-wrap]');
+  if (chipsWrap) chipsWrap.innerHTML = _ccTypeChips(lid, type);
+}
+function _ccTypeChips(lid, activeType) {
+  return Object.keys(_ccTypeIcons).map(t=>`<span onclick="ccSetItemType('${lid}','${t}',this)" style="cursor:pointer;font-size:11px;padding:3px 9px;border-radius:12px;font-weight:600;transition:background .15s,color .15s;background:${activeType===t?'var(--primary)':'rgba(74,0,177,0.08)'};color:${activeType===t?'#fff':'var(--primary)'};">${_ccTypeIcons[t]} ${_ccTypeLabels[t]}</span>`).join('');
+}
+
+/* — Add / delete — */
+function ccAddSection() {
+  _ccSections.push({_lid:_ccLid(),label:'',directItems:[],subsections:[]});
+  renderCCBuilder();
+  setTimeout(()=>{const b=document.querySelectorAll('.cc-sec-block');b[b.length-1]?.querySelector('input')?.focus();},40);
+}
+function ccDeleteSection(lid) { _ccSections=_ccSections.filter(s=>s._lid!==lid); renderCCBuilder(); }
+function ccAddDirectContent(sLid) {
+  const s=_ccGetSec(sLid); if(!s) return;
+  s.directItems.push({_lid:_ccLid(),content_type:'video',content_name:'',content_url:'',duration:'',is_free:false});
+  renderCCBuilder();
+}
+function ccAddSubsection(sLid) {
+  const s=_ccGetSec(sLid); if(!s) return;
+  s.subsections.push({_lid:_ccLid(),label:'',items:[]});
+  renderCCBuilder();
+}
+function ccDeleteSub(sLid,subLid) { const s=_ccGetSec(sLid); if(s) s.subsections=s.subsections.filter(x=>x._lid!==subLid); renderCCBuilder(); }
+function ccAddSubContent(sLid,subLid) {
+  const sub=_ccGetSub(sLid,subLid); if(!sub) return;
+  sub.items.push({_lid:_ccLid(),content_type:'video',content_name:'',content_url:'',duration:'',is_free:false});
+  renderCCBuilder();
+}
+function ccDeleteItem(lid,sLid,subLid) {
+  if (subLid) { const sub=_ccGetSub(sLid,subLid); if(sub) sub.items=sub.items.filter(i=>i._lid!==lid); }
+  else        { const s=_ccGetSec(sLid); if(s) s.directItems=s.directItems.filter(i=>i._lid!==lid); }
+  renderCCBuilder();
+}
+
+/* — Renderers — */
+function _ccItemRow(item, sLid, subLid) {
+  const sl = subLid||'';
+  return `<div class="cc-item-row" data-lid="${item._lid}" style="display:flex;flex-wrap:wrap;align-items:center;gap:6px;background:var(--card);border:1px solid rgba(74,0,177,0.1);border-radius:8px;padding:8px 10px;">
+    <div data-chips-wrap style="display:flex;gap:4px;flex-wrap:wrap;">${_ccTypeChips(item._lid,item.content_type)}</div>
+    <input value="${_ccEsc(item.content_name)}" oninput="ccSetItemField('${item._lid}','content_name',this.value)" placeholder="Lesson name" style="flex:1;min-width:120px;border:1px solid var(--border);border-radius:6px;padding:5px 8px;font-size:13px;background:var(--bg);color:var(--text);">
+    <input value="${_ccEsc(item.content_url)}" oninput="ccSetItemField('${item._lid}','content_url',this.value)" placeholder="YouTube / PDF / any URL" style="flex:2;min-width:180px;border:1px solid var(--border);border-radius:6px;padding:5px 8px;font-size:12px;background:var(--bg);color:var(--text);">
+    <input value="${_ccEsc(item.duration)}" oninput="ccSetItemField('${item._lid}','duration',this.value)" placeholder="30:00" title="Duration" style="width:66px;border:1px solid var(--border);border-radius:6px;padding:5px 8px;font-size:12px;background:var(--bg);color:var(--text);">
+    <label style="display:flex;align-items:center;gap:4px;font-size:12px;color:var(--text-mid);cursor:pointer;white-space:nowrap;"><input type="checkbox" ${item.is_free?'checked':''} onchange="ccSetItemField('${item._lid}','is_free',this.checked)" style="width:14px;height:14px;accent-color:var(--primary);"> Free</label>
+    <button onclick="ccDeleteItem('${item._lid}','${sLid}','${sl}')" style="background:none;border:none;cursor:pointer;font-size:18px;color:#c03030;line-height:1;padding:0 2px;flex-shrink:0;" title="Remove">×</button>
+  </div>`;
+}
+function _ccSubBlock(sLid, sub) {
+  return `<div class="cc-sub-block" style="border:1px solid rgba(74,0,177,0.15);border-radius:8px;overflow:hidden;background:var(--bg);">
+    <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:rgba(74,0,177,0.05);border-bottom:1px solid rgba(74,0,177,0.1);">
+      <span style="font-size:10px;font-weight:800;color:var(--primary);letter-spacing:.08em;">SUB</span>
+      <input value="${_ccEsc(sub.label)}" oninput="ccSetSubLabel('${sLid}','${sub._lid}',this.value)" placeholder="Subsection name" style="flex:1;border:none;background:none;font-size:13px;font-weight:600;color:var(--text);outline:none;padding:2px 0;">
+      <button onclick="ccDeleteSub('${sLid}','${sub._lid}')" style="background:none;border:none;cursor:pointer;font-size:18px;color:var(--text-dim);line-height:1;padding:0 4px;" title="Delete subsection">×</button>
+    </div>
+    <div style="padding:8px 12px;display:flex;flex-direction:column;gap:6px;">
+      ${sub.items.map(item=>_ccItemRow(item,sLid,sub._lid)).join('')}
+      <button onclick="ccAddSubContent('${sLid}','${sub._lid}')" style="align-self:flex-start;background:none;border:1.5px dashed rgba(74,0,177,0.3);border-radius:6px;padding:5px 14px;font-size:12px;color:var(--primary);cursor:pointer;font-weight:600;">+ Add Content</button>
+    </div>
+  </div>`;
+}
+function _ccSecBlock(sec) {
+  return `<div class="cc-sec-block" style="border:1.5px solid rgba(192,48,48,0.3);border-radius:10px;overflow:hidden;background:var(--card);">
+    <div style="display:flex;align-items:center;gap:8px;padding:10px 14px;background:rgba(255,200,200,0.22);border-bottom:1px solid rgba(192,48,48,0.18);">
+      <span style="font-size:10px;font-weight:800;color:#c03030;letter-spacing:.09em;">SECTION</span>
+      <input value="${_ccEsc(sec.label)}" oninput="ccSetSecLabel('${sec._lid}',this.value)" placeholder="Section name" style="flex:1;border:none;background:none;font-size:14px;font-weight:700;color:var(--text);outline:none;padding:2px 0;">
+      <button onclick="ccDeleteSection('${sec._lid}')" style="background:none;border:none;cursor:pointer;font-size:20px;color:#c03030;line-height:1;padding:0 4px;" title="Delete section">×</button>
+    </div>
+    <div style="padding:10px 14px;display:flex;flex-direction:column;gap:8px;">
+      ${sec.directItems.map(item=>_ccItemRow(item,sec._lid,null)).join('')}
+      ${sec.subsections.map(sub=>_ccSubBlock(sec._lid,sub)).join('')}
+      <div style="display:flex;gap:8px;margin-top:2px;flex-wrap:wrap;">
+        <button onclick="ccAddDirectContent('${sec._lid}')" style="background:none;border:1.5px dashed rgba(74,0,177,0.3);border-radius:6px;padding:6px 14px;font-size:12px;color:var(--primary);cursor:pointer;font-weight:600;">+ Add Content</button>
+        <button onclick="ccAddSubsection('${sec._lid}')" style="background:none;border:1.5px dashed rgba(74,0,177,0.2);border-radius:6px;padding:6px 14px;font-size:12px;color:var(--text-dim);cursor:pointer;font-weight:600;">+ Add Subsection</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+function renderCCBuilder() {
   const body = document.getElementById('cc-body');
   if (!body) return;
-  if (!_ccCourseContent.length) {
-    body.innerHTML = '<div style="text-align:center;padding:60px 20px;color:var(--text-dim);font-size:14px;">No lessons yet. Click + to add a lesson.</div>';
-    return;
-  }
-  const typeIcons  = {video:'🎬',picture:'🖼️',pdf:'📄',mcq:'📝',link:'🔗'};
-  const typeLabels = {video:'Video',picture:'Picture',pdf:'PDF',mcq:'MCQ',link:'Link'};
-  // Group by section
-  const grouped = {};
-  const sectionOrder = [];
-  _ccCourseContent.forEach(item => {
-    const sec = item.section_label || 'Lessons';
-    if (!grouped[sec]) { grouped[sec] = []; sectionOrder.push(sec); }
-    grouped[sec].push(item);
-  });
-  body.innerHTML = sectionOrder.map(sec => `
-    <div style="margin-bottom:24px;">
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
-        <div style="font-size:12px;font-weight:800;color:var(--text-dim);text-transform:uppercase;letter-spacing:.06em;">${sec}</div>
-        <div style="flex:1;height:1px;background:rgba(74,0,177,0.15);"></div>
-        <span style="font-size:11px;color:var(--text-dim);">${grouped[sec].length} lesson${grouped[sec].length!==1?'s':''}</span>
-      </div>
-      <div style="display:flex;flex-direction:column;gap:6px;">
-      ${grouped[sec].map((item, idx) => {
-        const url = item.content_url || '';
-        const icon = typeIcons[item.content_type] || '📌';
-        const sortVal = item.sort_order ?? idx;
-        return `<div style="display:flex;align-items:center;gap:10px;background:var(--card);border:1px solid rgba(74,0,177,0.12);border-radius:8px;padding:10px 14px;">
-          <div style="display:flex;flex-direction:column;gap:2px;">
-            <button onclick="moveCCItem(${item.id},-1)" style="background:none;border:none;cursor:pointer;font-size:11px;color:var(--text-dim);padding:0;line-height:1;" title="Move up">▲</button>
-            <button onclick="moveCCItem(${item.id},1)"  style="background:none;border:none;cursor:pointer;font-size:11px;color:var(--text-dim);padding:0;line-height:1;" title="Move down">▼</button>
-          </div>
-          <div style="font-size:20px;min-width:28px;text-align:center;">${icon}</div>
-          <div style="flex:1;min-width:0;">
-            <div style="font-weight:700;font-size:13px;color:var(--text);">${item.content_name||'Untitled'}</div>
-            <div style="font-size:11px;color:var(--text-dim);display:flex;gap:8px;margin-top:2px;">
-              <span>${typeLabels[item.content_type]||item.content_type}</span>
-              ${url ? `<a href="${url}" target="_blank" style="color:var(--purple);text-decoration:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:240px;">${url}</a>` : ''}
-            </div>
-            ${item.description ? `<div style="font-size:11px;color:var(--text-dim);margin-top:2px;font-style:italic;">${item.description}</div>` : ''}
-          </div>
-          <div class="action-btns" style="flex-shrink:0;">
-            <button class="btn-icon btn-edit"   onclick="editCCItem(${item.id})">✎</button>
-            <button class="btn-icon btn-delete" onclick="deleteCCItem(${item.id})">🗑</button>
-          </div>
-        </div>`;
-      }).join('')}
-      </div>
-    </div>`).join('');
+  body.innerHTML = `<div style="display:flex;flex-direction:column;gap:16px;max-width:760px;padding-bottom:40px;">
+    ${_ccSections.map(_ccSecBlock).join('')}
+    <button onclick="ccAddSection()" style="align-self:flex-start;background:none;border:2px dashed var(--border);border-radius:8px;padding:8px 22px;font-size:13px;color:var(--text-dim);cursor:pointer;font-weight:600;">+ Add Section</button>
+  </div>`;
 }
 
-function openCCAddModal() {
-  _ccType = null;
-  document.getElementById('cc-edit-id').value       = '';
-  document.getElementById('cc-name').value           = '';
-  document.getElementById('cc-url-direct').value     = '';
-  document.getElementById('cc-section').value        = '';
-  document.getElementById('cc-sort-order').value     = _ccCourseContent.length;
-  document.getElementById('cc-description').value    = '';
-  document.getElementById('cc-item-search').value    = '';
-  document.getElementById('cc-selected-id').value    = '';
-  document.getElementById('cc-selected-preview').style.display = 'none';
-  document.getElementById('cc-item-list').innerHTML  = '<div style="padding:14px;text-align:center;font-size:12px;color:var(--text-dim);">Select a content type above.</div>';
-  document.querySelectorAll('#cc-type-btns .cat-chip').forEach(b=>b.classList.remove('selected'));
-  document.getElementById('cc-modal-head').textContent = 'Add Lesson';
-  openModal('modal-cc-add');
-}
+/* — Save All — */
+async function saveAllCourseContent() {
+  const courseId = document.getElementById('cc-course-sel').value;
+  if (!courseId) return;
+  const btn = document.getElementById('cc-save-btn');
+  btn.disabled = true; btn.textContent = 'Saving…';
 
-function editCCItem(id) {
-  const item = _ccCourseContent.find(x => x.id === id);
-  if (!item) return;
-  _ccType = item.content_type;
-  document.getElementById('cc-edit-id').value       = item.id;
-  document.getElementById('cc-name').value           = item.content_name || '';
-  document.getElementById('cc-url-direct').value     = item.content_url  || '';
-  document.getElementById('cc-section').value        = item.section_label || '';
-  document.getElementById('cc-sort-order').value     = item.sort_order ?? 0;
-  document.getElementById('cc-description').value    = item.description || '';
-  document.getElementById('cc-selected-id').value    = item.content_id || '';
-  document.getElementById('cc-selected-preview').style.display = 'none';
-  document.getElementById('cc-item-list').innerHTML  = '';
-  document.querySelectorAll('#cc-type-btns .cat-chip').forEach(b => {
-    b.classList.toggle('selected', b.textContent.toLowerCase().includes(_ccType||'__'));
-  });
-  document.getElementById('cc-modal-head').textContent = 'Edit Lesson';
-  openModal('modal-cc-add');
-}
-
-async function setCCType(type, el) {
-  _ccType = type;
-  document.querySelectorAll('#cc-type-btns .cat-chip').forEach(b=>b.classList.remove('selected'));
-  el.classList.add('selected');
-  document.getElementById('cc-selected-id').value = '';
-  document.getElementById('cc-selected-preview').style.display = 'none';
-  document.getElementById('cc-item-search').value = '';
-  // Load items from the right store
-  let items = [];
-  if (type === 'video')   { if (!storeVideos.length)   await loadStoreVideos();   items = storeVideos.map(v=>({id:v.id,name:v.name,url:v.youtube_url})); }
-  if (type === 'picture') { if (!storePictures.length) await loadStorePictures(); items = storePictures.map(p=>({id:p.id,name:p.name,url:p.image_url})); }
-  if (type === 'pdf')     { if (!storePDFs.length)     await loadStorePDFs();     items = storePDFs.map(p=>({id:p.id,name:p.name,url:p.file_url})); }
-  if (type === 'link')    { if (!storeLinks.length)    await loadStoreLinks();    items = storeLinks.map(l=>({id:l.id,name:l.name,url:l.url})); }
-  _ccAllItems = items;
-  renderCCItemList(items);
-}
-
-function renderCCItemList(items) {
-  const list = document.getElementById('cc-item-list');
-  if (!items.length) { list.innerHTML = '<div style="padding:14px;text-align:center;font-size:12px;color:var(--text-dim);">No items in this store yet.</div>'; return; }
-  list.innerHTML = items.map(i=>`
-    <div onclick="selectCCItem(${i.id},'${(i.name||'').replace(/'/g,"\\'")}')"
-      style="padding:10px 14px;cursor:pointer;border-bottom:1px solid #f0f0f0;font-size:13px;"
-      onmouseover="this.style.background='var(--blue-light)'" onmouseout="this.style.background=''">
-      <div style="font-weight:600;color:var(--text);">${i.name}</div>
-      ${i.url?`<div style="font-size:11px;color:var(--text-dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:340px;">${i.url}</div>`:''}
-    </div>`).join('');
-}
-
-function filterCCItems(q) {
-  const t = q.toLowerCase();
-  renderCCItemList(t ? _ccAllItems.filter(i=>(i.name||'').toLowerCase().includes(t)) : _ccAllItems);
-}
-
-function selectCCItem(id, name) {
-  document.getElementById('cc-selected-id').value = id;
-  const preview = document.getElementById('cc-selected-preview');
-  preview.textContent = '✓ Selected: ' + name;
-  preview.style.display = '';
-}
-
-async function saveCCItem() {
-  const courseId    = document.getElementById('cc-course-sel').value;
-  const editId      = document.getElementById('cc-edit-id').value;
-  const directName  = document.getElementById('cc-name').value.trim();
-  const directUrl   = document.getElementById('cc-url-direct').value.trim();
-  const section     = document.getElementById('cc-section').value.trim();
-  const sortOrder   = parseInt(document.getElementById('cc-sort-order').value) || 0;
-  const description = document.getElementById('cc-description').value.trim();
-  const storeItemId = document.getElementById('cc-selected-id').value;
-
-  if (!courseId) { toast('No course selected','error'); return; }
-
-  // Determine name / url / type from either direct-entry or store picker
-  let finalName = directName;
-  let finalUrl  = directUrl || null;
-  let finalType = _ccType;
-  let finalContentId = null;
-
-  if (!finalName && storeItemId) {
-    // store-picker path
-    const found = _ccAllItems.find(i=>String(i.id)===String(storeItemId));
-    finalName      = found?.name || '';
-    finalUrl       = found?.url  || null;
-    finalContentId = parseInt(storeItemId);
+  const rows = [];
+  let idx = 0;
+  for (const sec of _ccSections) {
+    for (const item of sec.directItems) {
+      if (!item.content_name && !item.content_url) continue;
+      rows.push({ course_id:parseInt(courseId), section_label:sec.label||null, subsection_label:null,
+        content_type:item.content_type, content_name:item.content_name, content_url:item.content_url||null,
+        duration:item.duration||null, is_free:item.is_free||false, sort_order:idx++ });
+    }
+    for (const sub of sec.subsections) {
+      for (const item of sub.items) {
+        if (!item.content_name && !item.content_url) continue;
+        rows.push({ course_id:parseInt(courseId), section_label:sec.label||null, subsection_label:sub.label||null,
+          content_type:item.content_type, content_name:item.content_name, content_url:item.content_url||null,
+          duration:item.duration||null, is_free:item.is_free||false, sort_order:idx++ });
+      }
+    }
   }
 
-  if (!finalName) { toast('Enter a lesson name','error'); return; }
+  const { error: delErr } = await sb.from('course_content').delete().eq('course_id', courseId);
+  if (delErr) { toast('Delete failed: '+delErr.message,'error'); btn.disabled=false; btn.textContent='💾 Save All'; return; }
 
-  // Auto-detect type from URL if not set
-  if (!finalType && finalUrl) {
-    if (/youtube\.com|youtu\.be/i.test(finalUrl))  finalType = 'video';
-    else if (/\.pdf$/i.test(finalUrl))             finalType = 'pdf';
-    else if (/\.(png|jpe?g|gif|webp)$/i.test(finalUrl)) finalType = 'picture';
-    else                                            finalType = 'link';
+  if (rows.length) {
+    const { error: insErr } = await sb.from('course_content').insert(rows);
+    if (insErr) { toast('Save failed: '+insErr.message,'error'); btn.disabled=false; btn.textContent='💾 Save All'; return; }
   }
-  if (!finalType) finalType = 'link';
 
-  const payload = {
-    course_id:     parseInt(courseId),
-    content_type:  finalType,
-    content_id:    finalContentId,
-    content_name:  finalName,
-    content_url:   finalUrl,
-    section_label: section || null,
-    sort_order:    sortOrder,
-    description:   description || null,
-  };
-
-  const btn = document.querySelector('#modal-cc-add .btn-primary');
-  btn.disabled = true;
-  let error;
-  if (editId) {
-    ({ error } = await sb.from('course_content').update(payload).eq('id', editId));
-  } else {
-    ({ error } = await sb.from('course_content').insert(payload));
-  }
-  btn.disabled = false;
-  if (error) { toast('Error: '+error.message,'error'); return; }
-  closeModal('modal-cc-add');
+  btn.disabled = false; btn.textContent = '💾 Save All';
+  toast(`Saved ${rows.length} lesson${rows.length!==1?'s':''}!`, 'success');
   await loadCourseContentForCourse();
-  toast(editId ? 'Lesson updated!' : 'Lesson added!', 'success');
-}
-
-async function moveCCItem(id, direction) {
-  // direction: -1 = up (lower sort_order), +1 = down (higher sort_order)
-  const sorted = [..._ccCourseContent].sort((a,b)=>(a.sort_order??0)-(b.sort_order??0));
-  const idx = sorted.findIndex(x=>x.id===id);
-  if (idx < 0) return;
-  const swapIdx = idx + direction;
-  if (swapIdx < 0 || swapIdx >= sorted.length) return;
-  const a = sorted[idx];
-  const b = sorted[swapIdx];
-  const aSort = a.sort_order ?? idx;
-  const bSort = b.sort_order ?? swapIdx;
-  await Promise.all([
-    sb.from('course_content').update({sort_order: bSort}).eq('id', a.id),
-    sb.from('course_content').update({sort_order: aSort}).eq('id', b.id),
-  ]);
-  await loadCourseContentForCourse();
-}
-
-async function deleteCCItem(id) {
-  if (!confirm('Remove this content from the course?')) return;
-  await sb.from('course_content').delete().eq('id',id);
-  await loadCourseContentForCourse();
-  toast('Removed','');
 }
 
 /* ══ SEND SMS ══ */
