@@ -71,79 +71,100 @@ body::before{
 .page.active{display:block;}
 
 /*═══════════════════════
-  NAV  (h=92px exactly)
-  logo x=159–307 y=25–67
-  search x=488 w=316 h=42 rx=21 fill=#0A0214
-  CTA btn x=1099 w=182 h=44 rx=22 fill=#4A00B1
+  NAV — Ocoya floating boxed style
 ═══════════════════════*/
-.nav{
+
+/* Sticky wrapper — provides the top padding so the pill floats */
+.nav-wrap{
   position:sticky;top:0;z-index:200;
-  width:100%;height:72px;
-  background:rgba(10,2,20,0.6);
-  backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);
-  border-bottom:1px solid rgba(74,0,177,0.18);
+  padding:10px 20px;
+  pointer-events:none; /* pass-through so page content underneath is still clickable */
+  transition:padding .35s cubic-bezier(.4,0,.2,1);
+}
+.nav-wrap.scrolled{ padding:6px 20px; }
+
+/* The actual pill */
+.nav{
+  pointer-events:all;
+  width:100%;
+  height:58px;
+  background:rgba(13,7,26,0.82);
+  backdrop-filter:blur(22px);-webkit-backdrop-filter:blur(22px);
+  border:1px solid rgba(255,255,255,0.07);
+  border-radius:14px;
   display:grid;
   grid-template-columns:auto 1fr auto;
   align-items:center;
-  padding:0 40px;gap:24px;
-  transition:height .3s cubic-bezier(.4,0,.2,1),
-             padding .3s cubic-bezier(.4,0,.2,1),
-             background .3s ease,
-             box-shadow .3s ease;
+  padding:0 20px;gap:20px;
+  box-shadow:0 2px 24px rgba(0,0,0,0.35),
+             inset 0 1px 0 rgba(255,255,255,0.04);
+  transition:height .35s cubic-bezier(.4,0,.2,1),
+             padding .35s cubic-bezier(.4,0,.2,1),
+             box-shadow .35s ease;
 }
-/* Shrunk state when user scrolls down */
-.nav.scrolled{
-  height:52px;
-  background:rgba(8,5,16,0.88);
-  box-shadow:0 4px 32px rgba(0,0,0,0.45);
-  border-bottom-color:rgba(74,0,177,0.25);
+/* Shrunk on scroll */
+.nav-wrap.scrolled .nav{
+  height:48px;
+  box-shadow:0 4px 36px rgba(0,0,0,0.55),
+             inset 0 1px 0 rgba(255,255,255,0.04);
+  background:rgba(10,5,20,0.92);
 }
-.nav.scrolled .nav-logo img{ height:38px; }
-.nav.scrolled .nav-search{ height:34px; }
-.nav.scrolled .btn-nav{ padding:7px 18px;font-size:13px; }
+.nav-wrap.scrolled .nav-logo img{ height:34px; }
+.nav-wrap.scrolled .btn-nav{ padding:6px 16px;font-size:12px; }
+
 .nav-logo{
   display:flex;align-items:center;cursor:pointer;
-  flex-shrink:0;
-  text-decoration:none;
+  flex-shrink:0;text-decoration:none;
 }
-.nav-logo img{height:56px;width:200px;object-fit:cover;object-position:center 52%;}
+.nav-logo img{
+  height:42px;width:150px;
+  object-fit:cover;object-position:center 52%;
+  transition:height .35s cubic-bezier(.4,0,.2,1);
+}
 .nav-logo-fallback{
-  font-size:22px;font-weight:900;color:var(--text);letter-spacing:-0.02em;
+  font-size:20px;font-weight:900;color:var(--text);letter-spacing:-0.02em;
 }
 .nav-logo-fallback em{color:var(--text-acc);font-style:normal;}
 
 /* Search pill — centered column */
 .nav-search{
   display:flex;align-items:center;gap:10px;
-  background:var(--bg);
-  border:1px solid rgba(74,0,177,0.35);
-  border-radius:21px;
-  padding:0 18px;height:42px;
-  max-width:320px;width:100%;margin:0 auto;
+  background:rgba(255,255,255,0.05);
+  border:1px solid rgba(255,255,255,0.08);
+  border-radius:10px;
+  padding:0 14px;height:36px;
+  max-width:280px;width:100%;margin:0 auto;
+  transition:border-color .2s,background .2s;
+}
+.nav-search:focus-within{
+  border-color:rgba(74,0,177,0.5);
+  background:rgba(74,0,177,0.07);
 }
 .nav-search input{
   background:none;border:none;outline:none;
-  color:var(--text-mid);font-family:var(--font);font-size:14px;
+  color:var(--text-mid);font-family:var(--font);font-size:13px;
   flex:1;
 }
-.nav-search input::placeholder{color:var(--text-dim);}
-.nav-search svg{flex-shrink:0;opacity:.5;}
+.nav-search input::placeholder{color:rgba(255,255,255,0.25);}
+.nav-search svg{flex-shrink:0;opacity:.35;}
 
-/* Right side: links + cart + button */
+/* Right side: links + icons + buttons */
 .nav-right{
-  display:flex;align-items:center;gap:20px;
+  display:flex;align-items:center;gap:6px;
   flex-shrink:0;
 }
 .nav-links{
-  display:flex;align-items:center;gap:20px;
-  list-style:none;
+  display:flex;align-items:center;gap:2px;
+  list-style:none;margin-right:8px;
 }
 .nav-links a{
-  color:var(--text-mid);text-decoration:none;
-  font-size:14px;font-weight:600;cursor:pointer;
-  transition:color .2s;white-space:nowrap;
+  color:rgba(255,255,255,0.65);text-decoration:none;
+  font-size:13.5px;font-weight:500;cursor:pointer;
+  padding:6px 11px;border-radius:8px;
+  transition:color .18s, background .18s;white-space:nowrap;
+  display:block;
 }
-.nav-links a:hover{color:var(--text);}
+.nav-links a:hover{color:#fff;background:rgba(255,255,255,0.07);}
 
 /* ── Courses hover dropdown — Ocoya-style horizontal mega menu ── */
 .nav-has-dropdown{position:relative;list-style:none;}
@@ -334,15 +355,16 @@ body::before{
 
 /* CTA btn */
 .btn-nav{
-  height:44px;padding:0 20px;
-  background:var(--purple);color:var(--text);
-  border:none;border-radius:22px;
+  height:36px;padding:0 18px;
+  background:#fff;color:#0A0214;
+  border:none;border-radius:8px;
   font-family:var(--font);font-size:13px;font-weight:700;
   cursor:pointer;white-space:nowrap;
-  transition:opacity .2s;text-decoration:none;
-  display:inline-flex;align-items:center;
+  transition:background .18s, transform .15s;text-decoration:none;
+  display:inline-flex;align-items:center;letter-spacing:-0.01em;
 }
-.btn-nav:hover{opacity:.88;}
+.btn-nav:hover{background:#e8e0ff;transform:translateY(-1px);}
+.btn-nav:active{transform:translateY(0);}
 
 /*═══════════════════════
   HERO SECTION
@@ -1554,7 +1576,8 @@ footer{
 <body>
 
 <!-- ═══ NAV ═══ -->
-<nav class="nav" id="main-nav" style="display:none;">
+<div class="nav-wrap" id="main-nav-wrap" style="display:none;">
+<nav class="nav" id="main-nav">
   <a class="nav-logo" onclick="go('home')">
     <img src="Merito_whitelogo.png" alt="Merito" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
     <span class="nav-logo-fallback" style="display:none;">Merito</span>
@@ -1613,6 +1636,7 @@ footer{
     <a class="btn-nav nav-cta" onclick="go('login')">Login / Reg.</a>
   </div>
 </nav>
+</div><!-- end .nav-wrap -->
 
 <!-- Mobile bottom nav -->
 <nav class="mob-nav" id="mob-nav" style="display:none;">
@@ -2486,9 +2510,9 @@ window.addEventListener('DOMContentLoaded', async () => {
 
 /* ── Ocoya-style scroll-shrink navbar ── */
 function _applyNavScroll() {
-  const nav = document.getElementById('main-nav');
-  if (!nav) return;
-  nav.classList.toggle('scrolled', window.scrollY > 50);
+  const wrap = document.getElementById('main-nav-wrap');
+  if (!wrap) return;
+  wrap.classList.toggle('scrolled', window.scrollY > 50);
 }
 window.addEventListener('scroll', _applyNavScroll, { passive: true });
 document.addEventListener('scroll', _applyNavScroll, { passive: true });
@@ -3792,9 +3816,9 @@ function go(page) {
   el.classList.add('active');
   window.scrollTo({top:0,behavior:'smooth'});
   // Reset nav to expanded state on every page change (page starts at top)
-  setTimeout(() => { const n = document.getElementById('main-nav'); if(n) n.classList.remove('scrolled'); }, 50);
+  setTimeout(() => { const w = document.getElementById('main-nav-wrap'); if(w) w.classList.remove('scrolled'); }, 50);
   const noNav = ['login', 'register', 'verify'];
-  document.getElementById('main-nav').style.display = noNav.includes(page) ? 'none' : 'flex';
+  document.getElementById('main-nav-wrap').style.display = noNav.includes(page) ? 'none' : 'block';
   document.getElementById('mob-nav').style.display  = noNav.includes(page) ? 'none' : 'block';
   setTimeout(() => {
     el.querySelectorAll('.reveal').forEach(r => r.classList.add('on'));
@@ -3812,7 +3836,7 @@ function go(page) {
   }
   // Hide nav for course-player (full-screen experience)
   if (page === 'course-player') {
-    document.getElementById('main-nav').style.display = 'none';
+    document.getElementById('main-nav-wrap').style.display = 'none';
     document.getElementById('mob-nav').style.display  = 'none';
   }
 }
