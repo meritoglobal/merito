@@ -10,7 +10,7 @@
      Bump SITE_V on every deploy so users automatically get the fresh version. -->
 <script>
 !function(){
-  var SITE_V='merito_20260416_14';
+  var SITE_V='merito_20260416_15';
   if(localStorage.getItem('_sv')!==SITE_V){
     localStorage.setItem('_sv',SITE_V);
     // Hard reload bypasses disk cache and fetches fresh from server
@@ -2502,9 +2502,20 @@ let _paySettings = {
 
 /* ── On page load ── */
 window.addEventListener('DOMContentLoaded', async () => {
-  go('home');                                    // show navbar immediately
-  await Promise.all([loadSiteText(), loadCourses()]); // load both in parallel
-  // Session is restored by onAuthStateChange INITIAL_SESSION below
+  go('home'); // show navbar immediately
+
+  // Explicitly restore session — more reliable than waiting for INITIAL_SESSION event
+  try {
+    const { data: { session } } = await sb.auth.getSession();
+    if (session && !currentUser) {
+      currentUser = session.user;
+      upsertProfile(currentUser);
+      updateNavUI(true);
+      loadNotifications();
+    }
+  } catch(e) { /* session not available, stay logged out */ }
+
+  await Promise.all([loadSiteText(), loadCourses()]);
 });
 
 /* ── Ocoya-style scroll-shrink navbar ── */
