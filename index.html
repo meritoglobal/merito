@@ -2532,9 +2532,17 @@ sb.auth.onAuthStateChange(async (event, session) => {
 /* ── Check if user profile is fully complete ── */
 async function checkProfileComplete(user) {
   if (!user) return false;
-  const { data: profile } = await sb.from('profiles').select('full_name,phone').eq('id', user.id).single();
-  const hasPassword = !!(user.user_metadata?.has_password);
-  return !!(profile?.full_name && profile?.phone && hasPassword);
+  try {
+    const { data: profile } = await sb.from('profiles').select('full_name,phone,has_password').eq('id', user.id).single();
+    // Accept has_password from profiles table OR user_metadata (legacy fallback)
+    const hasPassword = !!(profile?.has_password || user.user_metadata?.has_password);
+    return !!(profile?.full_name && profile?.phone && hasPassword);
+  } catch(e) {
+    // If has_password column doesn't exist yet, fall back to simpler check
+    const { data: profile } = await sb.from('profiles').select('full_name,phone').eq('id', user.id).single();
+    const hasPassword = !!(user.user_metadata?.has_password);
+    return !!(profile?.full_name && profile?.phone && hasPassword);
+  }
 }
 
 /* ── Show forced profile setup page ── */
@@ -2708,7 +2716,7 @@ async function loadCourses() {
 
   const getVal = key => settings?.find(r => r.key === key)?.value;
 
-  if (error || !data) {
+  if (error || !data || data.length === 0) {
     COURSES = [
       {id:1,cat:'iba',catName:'IBA MBA',title:'IBA MBA Admission 2026',instructor:'M. Hasanuzzaman',lessons:60,rating:'4.9',price:2500,oldPrice:4000,icon:'📊',badge:'Bestseller',desc:'Complete IBA MBA admission preparation with 60+ lessons, mock tests and mentor Q&A.'},
       {id:2,cat:'ielts',catName:'IELTS Prep',title:'IELTS Hero — Complete Course',instructor:'S. Rahman',lessons:80,rating:'4.8',price:3000,oldPrice:5000,icon:'📝',badge:'New',desc:'Full IELTS preparation covering Listening, Reading, Writing & Speaking with mock tests.'},
@@ -2988,6 +2996,14 @@ async function handleProfileSetup() {
     errBox.style.display = 'block'; return;
   }
 
+  // Check phone uniqueness
+  const { data: existingPhone } = await sb.from('profiles')
+    .select('id').eq('phone', phone).neq('id', currentUser?.id || '').maybeSingle();
+  if (existingPhone) {
+    errBox.textContent = 'This phone number is already linked to another account.';
+    errBox.style.display = 'block'; return;
+  }
+
   const btn = document.querySelector('#page-register .btn-auth');
   btn.textContent = 'Saving…'; btn.disabled = true;
 
@@ -3002,7 +3018,7 @@ async function handleProfileSetup() {
     errBox.style.display = 'block'; return;
   }
 
-  // Upsert profile with name + phone
+  // Upsert profile with name + phone + has_password flag
   const { data: { user } } = await sb.auth.getUser();
   currentUser = user;
   await sb.from('profiles').upsert({
@@ -3010,6 +3026,7 @@ async function handleProfileSetup() {
     email: currentUser.email,
     full_name: name,
     phone: phone,
+    has_password: true,
   }, { onConflict: 'id' });
 
   btn.textContent = 'Complete Setup'; btn.disabled = false;
@@ -3176,9 +3193,10 @@ async function handleFPSetPassword() {
     errBox.style.display = 'block'; return;
   }
 
-  // Update profile completeness
+  // Sync has_password to profiles table + check completeness
   if (currentUser) {
     const { data: profile } = await sb.from('profiles').select('full_name,phone').eq('id', currentUser.id).single();
+    await sb.from('profiles').update({ has_password: true }).eq('id', currentUser.id);
     if (!profile?.full_name || !profile?.phone) {
       showProfileSetup(currentUser); return;
     }

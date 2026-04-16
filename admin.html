@@ -1346,11 +1346,12 @@ tbody tr.drag-over td:first-child{
         <input type="date" class="filter-date-input" id="uf-to" onchange="applyUserFilter()">
         <button class="filter-apply" onclick="applyUserFilter()">Apply</button>
         <button class="filter-clear" onclick="clearUserFilter()">Clear</button>
+        <button class="filter-apply" id="btn-incomplete-filter" onclick="toggleIncompleteFilter()" style="background:#fff3e0;color:#e65100;border-color:#ffb74d;">⚠ Incomplete Only</button>
         <span class="sales-filter-active-label" id="users-filter-label"></span>
       </div>
       <div class="table-wrap">
         <table>
-          <thead><tr><th>Name</th><th>Email</th><th>Phone</th><th>Institution</th><th>Enrolled</th><th>Joined</th><th>Actions</th></tr></thead>
+          <thead><tr><th>Name</th><th>Email</th><th>Phone</th><th>Institution</th><th>Enrolled</th><th>Profile</th><th>Joined</th><th>Actions</th></tr></thead>
           <tbody id="users-tbody"></tbody>
         </table>
         <div class="table-footer"><span id="users-count">0-0 of 0</span></div>
@@ -2180,6 +2181,14 @@ tbody tr.drag-over td:first-child{
           <span id="ud-pass-toggle-icon" style="font-size:13px;color:var(--text-dim);">▼ Show</span>
         </div>
         <div id="ud-pass-section" style="display:none;margin-top:14px;">
+          <!-- Service key setup banner — hidden once key is saved -->
+          <div id="ud-svckey-banner" style="display:none;background:#fff8e1;border:1px solid #ffe082;border-radius:6px;padding:10px 14px;margin-bottom:12px;">
+            <div style="font-size:12px;font-weight:600;color:#e65100;margin-bottom:6px;">⚠️ Service Role Key not set — required to change passwords</div>
+            <div style="display:flex;gap:8px;">
+              <input class="form-input" id="inline-svckey" type="password" placeholder="Paste Supabase service_role key here" autocomplete="new-password" style="flex:1;font-size:11px;">
+              <button class="btn-primary" onclick="saveInlineSvcKey()" style="white-space:nowrap;padding:8px 14px;font-size:12px;">Save Key</button>
+            </div>
+          </div>
           <div id="ud-pass-error" style="display:none;background:#fdecea;border:1px solid #f5c6cb;border-radius:6px;padding:10px 14px;margin-bottom:12px;font-size:12px;color:#c62828;"></div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
             <div class="form-group" style="margin:0;">
@@ -3278,6 +3287,11 @@ function applyUserFilter() {
     );
   }
 
+  // Incomplete profile filter
+  if (_showIncompleteOnly) {
+    rows = rows.filter(u => !u.full_name || !u.phone || !u.has_password);
+  }
+
   // Date range filter
   if (from) {
     const fromTs = new Date(from).getTime();
@@ -3300,6 +3314,18 @@ function applyUserFilter() {
   renderUsers(rows);
 }
 
+let _showIncompleteOnly = false;
+function toggleIncompleteFilter() {
+  _showIncompleteOnly = !_showIncompleteOnly;
+  const btn = document.getElementById('btn-incomplete-filter');
+  if (btn) {
+    btn.style.background = _showIncompleteOnly ? '#e65100' : '#fff3e0';
+    btn.style.color      = _showIncompleteOnly ? '#fff'    : '#e65100';
+    btn.textContent      = _showIncompleteOnly ? '⚠ Incomplete Only ✕' : '⚠ Incomplete Only';
+  }
+  applyUserFilter();
+}
+
 function clearUserFilter() {
   const si = document.getElementById('user-search-input');
   const fr = document.getElementById('uf-from');
@@ -3307,6 +3333,9 @@ function clearUserFilter() {
   if (si) si.value = '';
   if (fr) fr.value = '';
   if (to) to.value = '';
+  _showIncompleteOnly = false;
+  const btn = document.getElementById('btn-incomplete-filter');
+  if (btn) { btn.style.background = '#fff3e0'; btn.style.color = '#e65100'; btn.textContent = '⚠ Incomplete Only'; }
   applyUserFilter();
 }
 
@@ -3315,7 +3344,7 @@ function renderUsers(data) {
   if (!tbody) return;
   document.getElementById('users-count').textContent = `1-${data.length} of ${data.length}`;
   if (!data.length) {
-    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:40px;color:var(--text-dim)">No users found.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:40px;color:var(--text-dim)">No users found.</td></tr>';
     return;
   }
   tbody.innerHTML = data.map(u => {
@@ -3325,7 +3354,17 @@ function renderUsers(data) {
       : `<span style="display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:50%;background:var(--blue);color:#fff;font-size:11px;font-weight:700;margin-right:8px;vertical-align:middle;">${initials}</span>`;
     const joined = u.created_at ? new Date(u.created_at).toLocaleDateString('en-BD',{day:'2-digit',month:'short',year:'numeric'}) : '—';
     const enrCount = u._enr_count != null ? `<span class="badge badge-blue">${u._enr_count}</span>` : '<span class="badge badge-gray">—</span>';
-    return `<tr>
+
+    // Profile completeness badges
+    const missing = [];
+    if (!u.full_name) missing.push('Name');
+    if (!u.phone)     missing.push('Phone');
+    if (!u.has_password) missing.push('Password');
+    const profileBadge = missing.length === 0
+      ? `<span style="display:inline-block;padding:2px 8px;border-radius:12px;background:#e8f5e9;color:#2e7d32;font-size:11px;font-weight:600;">✓ Complete</span>`
+      : `<span style="display:inline-block;padding:2px 8px;border-radius:12px;background:#fff3e0;color:#e65100;font-size:11px;font-weight:600;cursor:pointer;" onclick="openUserDetail('${u.id}')" title="Missing: ${missing.join(', ')}">⚠ ${missing.join(', ')}</span>`;
+
+    return `<tr${missing.length ? ' style="background:#fffdf5;"' : ''}>
       <td>
         <span style="display:inline-flex;align-items:center;vertical-align:middle;">
           ${avatar}<span class="td-name" onclick="openUserDetail('${u.id}')" style="vertical-align:middle;">${u.full_name||'—'}</span>
@@ -3335,6 +3374,7 @@ function renderUsers(data) {
       <td style="font-size:12px;">${u.phone||'—'}</td>
       <td style="font-size:12px;color:var(--text-mid);">${u.institution||'—'}</td>
       <td style="text-align:center;">${enrCount}</td>
+      <td>${profileBadge}</td>
       <td style="font-size:12px;color:var(--text-dim);">${joined}</td>
       <td><div class="action-btns">
         <button class="btn-icon btn-edit" onclick="openUserDetail('${u.id}')" title="Edit / View">✎</button>
@@ -3470,9 +3510,26 @@ function toggleUDPassSection() {
     document.getElementById('ud-new-pass2').value = '';
     document.getElementById('ud-pass-error').style.display   = 'none';
     document.getElementById('ud-pass-success').style.display = 'none';
+    // Show service key banner if key not set
+    document.getElementById('ud-svckey-banner').style.display = SUPABASE_SERVICE_KEY ? 'none' : 'block';
   } else {
     section.style.display = 'none'; icon.textContent = '▼ Show';
   }
+}
+
+function saveInlineSvcKey() {
+  const key = document.getElementById('inline-svckey').value.trim();
+  if (!key) { toast('Paste the service role key first', 'error'); return; }
+  localStorage.setItem('meritoSvcKey', key);
+  SUPABASE_SERVICE_KEY = key;
+  try {
+    sbAdmin = supabase.createClient(SUPABASE_URL, key, {
+      auth: { autoRefreshToken: false, persistSession: false }
+    });
+  } catch(e) { console.warn('sbAdmin reinit failed:', e); }
+  document.getElementById('ud-svckey-banner').style.display = 'none';
+  document.getElementById('inline-svckey').value = '';
+  toast('Service key saved!', 'success');
 }
 
 function toggleUDPassVis(inputId, btnId) {
