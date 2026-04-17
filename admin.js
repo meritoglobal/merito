@@ -42,6 +42,11 @@ try {
   console.error('Supabase/EmailJS failed to initialize:', e);
 }
 
+// Use service-role client (bypasses RLS) when available, else fall back to anon.
+// Cross-user reads/writes (orders, profiles, enrollments) MUST use _db() so RLS
+// doesn't filter out other users' rows.
+function _db() { return SUPABASE_SERVICE_KEY ? sbAdmin : sb; }
+
 async function adminLogout() {
   if (confirm('Are you sure you want to logout?')) {
     await sb.auth.signOut();
@@ -328,7 +333,7 @@ let _activePreset = 'month';
 
 async function loadDashboard() {
   // Orders stats
-  const { data: orders } = await sb.from('orders').select('status,amount,created_at');
+  const { data: orders } = await _db().from('orders').select('status,amount,created_at');
   if (orders) {
     _allOrders = orders;
     const now = new Date();
@@ -356,11 +361,11 @@ async function loadDashboard() {
   const { data: courses } = await sb.from('courses').select('id').eq('is_active', true);
   document.getElementById('d-active-courses').textContent = courses ? courses.length : 0;
   // Users
-  const { data: profiles } = await sb.from('profiles').select('id');
+  const { data: profiles } = await _db().from('profiles').select('id');
   document.getElementById('d-total-students').textContent = profiles ? profiles.length : 0;
   const now = new Date();
   const thisMonth = p => new Date(p.created_at||Date.now()).getMonth() === now.getMonth();
-  const { data: allProfiles } = await sb.from('profiles').select('id,created_at');
+  const { data: allProfiles } = await _db().from('profiles').select('id,created_at');
   if (allProfiles) {
     document.getElementById('d-reg-month').textContent = allProfiles.filter(thisMonth).length;
     document.getElementById('d-reg-year').textContent  = allProfiles.length;
@@ -685,7 +690,7 @@ async function toggleCourse(id, current) {
 let allOrders = [];
 let currentOrderId = null;
 async function loadOrders() {
-  const { data } = await sb.from('orders').select('*,profiles(full_name,phone,email),courses(title)').order('created_at', {ascending:false});
+  const { data } = await _db().from('orders').select('*,profiles(full_name,phone,email),courses(title)').order('created_at', {ascending:false});
   if (data) {
     allOrders = data;
     renderOrders(data);
@@ -749,7 +754,7 @@ async function viewOrder(id) {
 
   // For complete orders, check whether enrollment actually exists
   if (isVerified && o.profiles?.email && o.course_id) {
-    const { data: enr } = await sb.from('course_enrollments')
+    const { data: enr } = await _db().from('course_enrollments')
       .select('id').eq('user_email', o.profiles.email).eq('course_id', o.course_id).maybeSingle();
 
     if (enr) {
@@ -768,7 +773,7 @@ async function updateOrderStatus(status) {
 
   const o = allOrders.find(x => x.id === currentOrderId);
 
-  const { error: orderErr } = await sb.from('orders').update({ status }).eq('id', currentOrderId);
+  const { error: orderErr } = await _db().from('orders').update({ status }).eq('id', currentOrderId);
   if (orderErr) { toast('Failed to update order: ' + orderErr.message, 'error'); return; }
 
   if (status === 'verified' && o) {
@@ -781,19 +786,19 @@ async function updateOrderStatus(status) {
       toast('⚠ Order marked complete but course ID is missing.', 'error');
     } else {
       // Write to the same course_enrollments table the site reads from
-      const { error: enrErr } = await sb.from('course_enrollments').upsert(
+      const { error: enrErr } = await _db().from('course_enrollments').upsert(
         { user_email: userEmail, course_id: courseId },
         { onConflict: 'user_email,course_id', ignoreDuplicates: true }
       );
       if (enrErr) {
         // Fallback: insert without upsert in case no unique constraint exists
-        await sb.from('course_enrollments').insert({ user_email: userEmail, course_id: courseId });
+        await _db().from('course_enrollments').insert({ user_email: userEmail, course_id: courseId });
       }
 
       // If the user detail modal is currently open for this user, refresh enrollment list
       const openEmail = document.getElementById('ud-user-email')?.value;
       if (openEmail && openEmail === userEmail) {
-        const { data: enrs } = await sb.from('course_enrollments').select('*').eq('user_email', userEmail);
+        const { data: enrs } = await _db().from('course_enrollments').select('*').eq('user_email', userEmail);
         _udEnrollments = enrs || [];
         renderUDEnrollments();
       }
@@ -826,12 +831,12 @@ async function reEnrollStudent() {
   btn.textContent = 'Enrolling…'; btn.disabled = true;
 
   // Insert into course_enrollments (try upsert, fallback to insert)
-  const { error } = await sb.from('course_enrollments').upsert(
+  const { error } = await _db().from('course_enrollments').upsert(
     { user_email: userEmail, course_id: courseId },
     { onConflict: 'user_email,course_id', ignoreDuplicates: true }
   );
   if (error) {
-    await sb.from('course_enrollments').insert({ user_email: userEmail, course_id: courseId });
+    await _db().from('course_enrollments').insert({ user_email: userEmail, course_id: courseId });
   }
 
   btn.textContent = '🔁 Re-enroll Student'; btn.disabled = false;
@@ -845,7 +850,7 @@ async function reEnrollStudent() {
   // Refresh user detail modal if open for this user
   const openEmail = document.getElementById('ud-user-email')?.value;
   if (openEmail && openEmail === userEmail) {
-    const { data: enrs } = await sb.from('course_enrollments').select('*').eq('user_email', userEmail);
+    const { data: enrs } = await _db().from('course_enrollments').select('*').eq('user_email', userEmail);
     _udEnrollments = enrs || [];
     renderUDEnrollments();
   }
@@ -871,7 +876,7 @@ let allUsers = [];
 let _udEnrollments = []; // enrollments for currently open user modal
 
 async function loadUsers() {
-  const { data } = await sb.from('profiles').select('*').order('created_at',{ascending:false});
+  const { data } = await _db().from('profiles').select('*').order('created_at',{ascending:false});
   allUsers = data || [];
   applyUserFilter();
 }
@@ -1028,7 +1033,7 @@ async function openUserDetail(userId) {
   document.getElementById('ud-enr-badge').textContent = '…';
 
   const userEmail = document.getElementById('ud-user-email').value;
-  const { data: enrs } = await sb.from('course_enrollments').select('*').eq('user_email', userEmail);
+  const { data: enrs } = await _db().from('course_enrollments').select('*').eq('user_email', userEmail);
   _udEnrollments = enrs || [];
   renderUDEnrollments();
 }
@@ -1082,14 +1087,14 @@ async function saveUserProfile() {
   if (email) payload.email = email;
   if (avatar_url) payload.avatar_url = avatar_url;
 
-  const { error } = await sb.from('profiles').update(payload).eq('id', id);
+  const { error } = await _db().from('profiles').update(payload).eq('id', id);
   btn.disabled = false; btn.textContent = '💾 Save Profile';
 
   if (error) {
     // If avatar_url column missing, retry without it
     if (error.message && error.message.includes('avatar_url')) {
       delete payload.avatar_url;
-      const { error: e2 } = await sb.from('profiles').update(payload).eq('id', id);
+      const { error: e2 } = await _db().from('profiles').update(payload).eq('id', id);
       if (e2) { toast('Error: '+e2.message,'error'); return; }
     } else {
       toast('Error: '+error.message,'error'); return;
@@ -1257,10 +1262,10 @@ async function udAddCourse() {
   if (!courseId)  { toast('Select a course first','error'); return; }
   if (_udEnrollments.find(e => e.course_id == courseId)) { toast('Already enrolled in this course','error'); return; }
 
-  const { error } = await sb.from('course_enrollments').insert({ user_email: userEmail, course_id: courseId });
+  const { error } = await _db().from('course_enrollments').insert({ user_email: userEmail, course_id: courseId });
   if (error) { toast('Error: '+error.message,'error'); return; }
 
-  const { data: enrs } = await sb.from('course_enrollments').select('*').eq('user_email', userEmail);
+  const { data: enrs } = await _db().from('course_enrollments').select('*').eq('user_email', userEmail);
   _udEnrollments = enrs || [];
   renderUDEnrollments();
   document.getElementById('ud-add-course').value = '';
@@ -1272,7 +1277,7 @@ async function udRemoveCourse(courseId) {
   const course    = allCourses.find(c => c.id == courseId);
   if (!confirm(`Remove this user from "${course?.title||'this course'}"?`)) return;
 
-  await sb.from('course_enrollments').delete().eq('user_email', userEmail).eq('course_id', courseId);
+  await _db().from('course_enrollments').delete().eq('user_email', userEmail).eq('course_id', courseId);
   _udEnrollments = _udEnrollments.filter(e => e.course_id != courseId);
   renderUDEnrollments();
   toast('Removed from course','');
@@ -1664,7 +1669,7 @@ let _currentEnrollBase     = 0;
 async function loadEnrollments(courseId, enrolledBase) {
   _currentEnrollCourseId = courseId;
   _currentEnrollBase     = enrolledBase || 0;
-  const { data } = await sb.from('course_enrollments').select('*').eq('course_id', courseId).order('created_at', {ascending:false});
+  const { data } = await _db().from('course_enrollments').select('*').eq('course_id', courseId).order('created_at', {ascending:false});
   renderEnrollments(data || []);
 }
 function renderEnrollments(rows) {
@@ -1693,7 +1698,7 @@ async function addEnrollment() {
   const email = document.getElementById('ec-enroll-email')?.value.trim();
   if (!email) { toast('Enter student email','error'); return; }
   if (!_currentEnrollCourseId) { toast('Save the course first, then enroll students','error'); return; }
-  const { error } = await sb.from('course_enrollments').insert({ course_id: _currentEnrollCourseId, user_email: email });
+  const { error } = await _db().from('course_enrollments').insert({ course_id: _currentEnrollCourseId, user_email: email });
   if (error) { toast(error.message.includes('duplicate') ? 'Student already enrolled' : 'Error: '+error.message, 'error'); return; }
   document.getElementById('ec-enroll-email').value = '';
   // Update enrolled_base display to reflect new count
@@ -1702,7 +1707,7 @@ async function addEnrollment() {
   toast('Student enrolled!', 'success');
 }
 async function removeEnrollment(enrollId) {
-  await sb.from('course_enrollments').delete().eq('id', enrollId);
+  await _db().from('course_enrollments').delete().eq('id', enrollId);
   _currentEnrollBase = parseInt(document.getElementById('ec-enrolled-base')?.value) || 0;
   await loadEnrollments(_currentEnrollCourseId, _currentEnrollBase);
   toast('Student removed','');
