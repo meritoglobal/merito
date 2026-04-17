@@ -359,8 +359,9 @@ body::before{
   position:absolute;top:-3px;right:-3px;
   background:var(--purple);color:#fff;
   font-size:10px;font-weight:800;
-  width:16px;height:16px;border-radius:50%;
-  display:flex;align-items:center;justify-content:center;
+  min-width:16px;height:16px;border-radius:8px;
+  padding:0 3px;
+  display:none;align-items:center;justify-content:center;
 }
 
 /* CTA btn */
@@ -1173,50 +1174,75 @@ footer{
   Payment: w=241 h=38 rx=5 stroke=#4A00B1
   Confirm: w=522 h=68 rx=8 fill=#04B852
 ═══════════════════════*/
-.cart-page{padding:60px 80px;}
-.cart-grid{display:grid;grid-template-columns:1fr 522px;gap:32px;}
-.cart-item{
-  display:flex;align-items:flex-start;gap:16px;
-  padding:16px 0;border-bottom:1px solid rgba(74,0,177,0.1);
-}
-/* Book thumb: w=71 h=71 rx=3.5 fill=#DEC7FF stroke=#4A00B1 */
-.cart-thumb{
-  width:71px;height:71px;border-radius:3.5px;
-  background:var(--text-acc);border:1px solid var(--purple);
-  flex-shrink:0;display:flex;align-items:center;justify-content:center;
-  font-size:28px;overflow:hidden;
-}
-.cart-info{flex:1;}
-.cart-title{font-size:14px;font-weight:800;color:var(--text);margin-bottom:4px;}
-.cart-meta{font-size:12px;color:var(--text-dim);}
-.cart-price{font-size:16px;font-weight:900;color:var(--text);white-space:nowrap;}
-.cart-remove{font-size:12px;color:#FF5252;cursor:pointer;margin-top:6px;display:inline-block;}
+/* ── Cart page ── */
+.cart-page{padding:48px 80px;}
+.cart-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:36px;}
+.cart-continue{font-size:13px;color:var(--text-acc);cursor:pointer;display:flex;align-items:center;gap:6px;font-weight:600;text-decoration:none;}
+.cart-continue:hover{opacity:.75;}
+.cart-header-mid{text-align:center;}
+.cart-header-mid h2{font-size:26px;font-weight:900;color:var(--text);margin:0;}
+#cart-count-label{font-size:13px;color:var(--text-dim);margin-top:3px;}
+.cart-grid{display:grid;grid-template-columns:1fr 360px;gap:28px;align-items:start;}
 
-/* Qty stepper: rx=3.5 stroke=#FFF5F5 */
-.qty-box{
-  border:1px solid var(--text);border-radius:3.5px;
-  display:flex;align-items:center;height:30px;overflow:hidden;margin-top:8px;
+/* Item rows */
+.cart-items-wrap{border-top:1px solid rgba(255,255,255,0.07);}
+.cart-item{
+  display:grid;grid-template-columns:84px 1fr auto 32px;
+  align-items:center;gap:18px;
+  padding:22px 0;border-bottom:1px solid rgba(255,255,255,0.06);
 }
-.qty-btn{width:28px;height:30px;background:none;border:none;color:var(--text);cursor:pointer;font-size:16px;font-weight:700;}
-.qty-num{padding:0 10px;font-size:14px;font-weight:700;color:var(--text);}
+.cart-thumb{
+  width:84px;height:84px;border-radius:10px;
+  background:var(--card);border:1px solid rgba(74,0,177,0.25);
+  flex-shrink:0;display:flex;align-items:center;justify-content:center;
+  font-size:34px;overflow:hidden;
+}
+.cart-item-info{min-width:0;}
+.cart-item-name{font-size:15px;font-weight:700;color:var(--text);margin-bottom:7px;line-height:1.35;}
+.cart-item-badge{
+  display:inline-flex;align-items:center;gap:4px;
+  font-size:11px;color:var(--text-dim);
+  background:rgba(74,0,177,0.12);border:1px solid rgba(74,0,177,0.2);
+  border-radius:20px;padding:2px 9px;
+}
+.cart-item-price{font-size:18px;font-weight:900;color:var(--text);white-space:nowrap;text-align:right;}
+.cart-item-remove{
+  width:32px;height:32px;display:flex;align-items:center;justify-content:center;
+  background:rgba(255,82,82,0.08);border:1px solid rgba(255,82,82,0.18);
+  border-radius:50%;cursor:pointer;color:#FF5252;font-size:17px;line-height:1;
+  transition:background .15s,border-color .15s;flex-shrink:0;
+}
+.cart-item-remove:hover{background:rgba(255,82,82,0.2);border-color:rgba(255,82,82,0.4);}
 
 /* Right: order summary */
 .order-box{
-  background:var(--card);
-  border-radius:8px;padding:24px;align-self:start;
-  position:sticky;top:108px;
+  background:var(--card);border-radius:12px;padding:28px;
+  align-self:start;position:sticky;top:108px;
+  border:1px solid rgba(74,0,177,0.18);
 }
-/* Progress bar: rx=4 gradient */
-.cart-progress{
-  width:100%;height:31px;background:rgba(74,0,177,0.15);
-  border-radius:4px;margin-bottom:16px;overflow:hidden;
+.order-box-title{font-size:16px;font-weight:800;color:var(--text);margin-bottom:20px;}
+.promo-row{display:flex;gap:8px;margin-bottom:20px;}
+.promo-input{
+  flex:1;height:40px;background:var(--bg);
+  border:1px solid rgba(74,0,177,0.28);border-radius:6px;
+  padding:0 12px;font-size:13px;color:var(--text);
+  font-family:var(--font);outline:none;
 }
-.cart-progress-fill{height:100%;background:linear-gradient(90deg,var(--purple),#7A2FE8);width:60%;border-radius:4px;}
+.promo-input::placeholder{color:var(--text-dim);}
+.promo-input:focus{border-color:var(--purple);}
+.promo-apply{
+  height:40px;padding:0 16px;background:var(--purple);color:#fff;
+  border:none;border-radius:6px;font-size:13px;font-weight:700;
+  cursor:pointer;font-family:var(--font);white-space:nowrap;
+  transition:opacity .15s;
+}
+.promo-apply:hover{opacity:.82;}
+.summary-divider{border:none;border-top:1px solid rgba(255,255,255,0.07);margin:16px 0;}
 .summary-row{display:flex;justify-content:space-between;font-size:14px;color:var(--text-mid);margin-bottom:10px;}
-.summary-row.total{color:var(--text);font-weight:800;font-size:16px;padding-top:10px;border-top:1px solid rgba(74,0,177,0.18);}
+.summary-row.total{color:var(--text);font-weight:800;font-size:17px;margin-bottom:0;}
+.cart-trust{display:flex;align-items:center;justify-content:center;gap:5px;font-size:11px;color:var(--text-dim);margin-top:12px;}
 
-/* Payment method inputs: w=241 h=38 rx=5 stroke=#4A00B1 */
-.pay-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0;}
+/* Payment method inputs */
 .pay-input-box{
   height:38px;border:1px solid var(--purple);
   border-radius:5px;background:transparent;
@@ -1225,14 +1251,14 @@ footer{
 }
 .pay-input-box:focus{background:rgba(74,0,177,0.08);}
 
-/* Confirm btn: h=68 rx=8 fill=#04B852 */
+/* Confirm btn */
 .btn-confirm{
-  width:100%;height:68px;background:#04B852;color:#fff;
+  width:100%;height:56px;background:#04B852;color:#fff;
   border:none;border-radius:8px;
-  font-family:var(--font);font-size:16px;font-weight:800;
+  font-family:var(--font);font-size:15px;font-weight:800;
   cursor:pointer;transition:opacity .2s;
   display:flex;align-items:center;justify-content:center;gap:10px;
-  margin-top:12px;
+  margin-top:20px;
 }
 .btn-confirm:hover{opacity:.88;}
 
@@ -1425,6 +1451,10 @@ footer{
   .detail-grid{grid-template-columns:1fr;padding:40px;}
   .detail-sidebar{order:-1;}
   .cart-grid{grid-template-columns:1fr;}
+  .cart-page{padding:40px 20px;}
+  .cart-header{flex-direction:column;gap:12px;text-align:center;}
+  .cart-item{grid-template-columns:72px 1fr auto 32px;gap:12px;}
+  .cart-thumb{width:72px;height:72px;font-size:28px;}
   .profile-layout{grid-template-columns:1fr;padding:32px;}
   .blogs-grid{grid-template-columns:repeat(2,1fr);}
   .books-grid{grid-template-columns:repeat(3,1fr);}
@@ -1649,7 +1679,7 @@ footer{
     </div>
     <div class="nav-cart" onclick="go('cart')">
       🛒
-      <span class="cart-badge">0</span>
+      <span class="cart-badge" id="nav-cart-badge"></span>
     </div>
     <a class="btn-nav nav-cta" onclick="go('login')">Login / Reg.</a>
   </div>
@@ -2255,26 +2285,38 @@ footer{
 ══════════════════════════════════════════════ -->
 <div id="page-cart" class="page">
   <div class="cart-page">
-    <div class="sec-label">Shopping</div>
-    <h2>Your Cart <span id="cart-count-label" style="font-size:16px;color:var(--text-dim);font-weight:400;"></span></h2>
-    <div class="cart-grid" style="margin-top:28px;">
-      <!-- Items column — fully managed by renderCart() -->
-      <div id="cart-items-container"></div>
+    <!-- Header -->
+    <div class="cart-header">
+      <a class="cart-continue" onclick="go('courses')">
+        <svg width="16" height="16" fill="none" viewBox="0 0 24 24"><path d="M19 12H5M12 5l-7 7 7 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Continue Shopping
+      </a>
+      <div class="cart-header-mid">
+        <h2>Your Cart</h2>
+        <div id="cart-count-label"></div>
+      </div>
+      <div style="width:130px;"></div>
+    </div>
 
+    <div class="cart-grid">
+      <!-- Items — managed by renderCart() -->
+      <div class="cart-items-wrap" id="cart-items-container"></div>
+
+      <!-- Summary -->
       <div class="order-box">
-        <h3 style="font-size:16px;font-weight:800;color:var(--text);margin-bottom:16px;">Order Summary</h3>
-        <div class="cart-progress"><div class="cart-progress-fill" id="cart-progress-fill"></div></div>
-        <div class="summary-row"><span>Subtotal</span><span id="cart-subtotal">৳0</span></div>
-        <div class="pay-grid">
-          <input class="pay-input-box" placeholder="Coupon code">
-          <input class="pay-input-box" placeholder="Referral code">
+        <div class="order-box-title">Order Summary</div>
+        <div class="promo-row">
+          <input class="promo-input" placeholder="Promo / coupon code">
+          <button class="promo-apply">Apply</button>
         </div>
+        <div class="summary-row"><span>Subtotal</span><span id="cart-subtotal">৳0</span></div>
+        <hr class="summary-divider">
         <div class="summary-row total"><span>Total</span><span id="cart-total">৳0</span></div>
         <button class="btn-confirm" id="cart-proceed-btn" onclick="proceedToPayment()" style="display:none;">
-          <svg width="20" height="20" fill="none" viewBox="0 0 24 24"><path d="M9 12l2 2 4-4" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="12" r="10" stroke="#fff" stroke-width="2"/></svg>
           Proceed to Payment
+          <svg width="16" height="16" fill="none" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </button>
-        <p style="font-size:12px;color:var(--text-dim);text-align:center;margin-top:10px;">🔒 Secure checkout • 7-day refund policy</p>
+        <div class="cart-trust">🔒 Secure checkout &nbsp;·&nbsp; 7-day refund policy</div>
       </div>
     </div>
   </div>
