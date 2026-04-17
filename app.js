@@ -15,7 +15,8 @@ let ALL_INSTRUCTORS = []; // all instructors loaded from DB
 let activeCart = []; // [{courseId, title, price, icon, orderId}]
 let currentCourseId = null;
 let activePaymentMethod = 'bkash';
-let _pendingCourseId = null; // course to open after login completes
+let _pendingCourseId = null;    // course to add-to-cart after login
+let _loginReturnState = null;  // { page, courseId } — page user was on before login redirect
 let _cartKeyCounter = 0;    // unique key for each cart item
 let _paySettings = {
   bkash_instructions: 'Send the total amount to our bKash Merchant number: 01XXXXXXXXX\nPlease include your full name as a reference.',
@@ -953,15 +954,29 @@ async function handleLogout() {
    REDIRECT AFTER LOGIN
 ══════════════════════════════════════════════ */
 function _redirectAfterLogin() {
+  // 1. User was trying to add a course to cart — open that course detail
   if (_pendingCourseId) {
     const id = _pendingCourseId;
     _pendingCourseId = null;
-    // Open the course they were trying to buy
-    if (COURSES.length) { openCourse(id); go('course-detail'); }
-    else { go('home'); }
-  } else {
-    go('home');
+    _loginReturnState = null;
+    if (COURSES.length) openCourse(id); // openCourse already calls go('detail')
+    else loadCourses().then(() => COURSES.length ? openCourse(id) : go('courses'));
+    return;
   }
+  // 2. User was on a specific page — return them there
+  if (_loginReturnState) {
+    const { page: rp, courseId: rc } = _loginReturnState;
+    _loginReturnState = null;
+    if (rp === 'detail' && rc) {
+      if (COURSES.length) openCourse(rc);
+      else loadCourses().then(() => COURSES.length ? openCourse(rc) : go('courses'));
+    } else {
+      go(rp);
+    }
+    return;
+  }
+  // 3. Default
+  go('home');
 }
 
 /* ══════════════════════════════════════════════
@@ -1633,6 +1648,15 @@ function go(page, _skipHistory, _noStack) {
   if (page === 'blogs') loadBlogs();
   if (page === 'books') loadBooks();
   if (page === 'login') {
+    // Remember where the user was so we can return after login
+    if (!_loginReturnState && !_noStack) {
+      const cur = document.querySelector('.page.active');
+      if (cur) {
+        const curId = cur.id.replace('page-', '');
+        if (!['login','register','verify','home'].includes(curId))
+          _loginReturnState = { page: curId, courseId: curId === 'detail' ? currentCourseId : null };
+      }
+    }
     document.getElementById('login-step-email').style.display = 'block';
     document.getElementById('login-step-pass').style.display  = 'none';
     document.getElementById('login-error').style.display      = 'none';
