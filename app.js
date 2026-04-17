@@ -1601,7 +1601,14 @@ const _pageHashes = {
 function _stopHomeVideos() {
   ['hero-video', 'homepage-video'].forEach(id => {
     const f = document.getElementById(id);
-    if (f && f.src) { f.dataset.savedSrc = f.src; f.src = ''; }
+    if (!f) return;
+    // getAttribute gives the literal value — f.src gives the browser-resolved absolute URL.
+    // Only save a real embed URL, never save 'about:blank' or empty.
+    const raw = f.getAttribute('src') || '';
+    if (raw && raw !== 'about:blank') f.dataset.savedSrc = raw;
+    // IMPORTANT: '' resolves to the current page URL and loads the site inside the iframe.
+    // Use 'about:blank' to truly blank it.
+    f.src = 'about:blank';
   });
 }
 function _restoreHomeVideos() {
