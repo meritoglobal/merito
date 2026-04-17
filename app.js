@@ -1020,7 +1020,17 @@ async function proceedToPayment() {
   go('payment');
 }
 
+function updateCartBadge() {
+  const badge = document.getElementById('nav-cart-badge');
+  if (!badge) return;
+  const n = activeCart.length;
+  if (n === 0) { badge.style.display = 'none'; return; }
+  badge.style.display = 'flex';
+  badge.textContent = n > 99 ? '99+' : n;
+}
+
 function renderCart() {
+  updateCartBadge();
   const container  = document.getElementById('cart-items-container');
   const countLabel = document.getElementById('cart-count-label');
   const totalEl    = document.getElementById('cart-total');
