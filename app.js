@@ -77,7 +77,7 @@ async function loadSiteText() {
   if (map.hero_video_url) {
     const vid = extractYTId(map.hero_video_url);
     const iframe = document.getElementById('hero-video');
-    if (vid && iframe) iframe.src = `https://www.youtube.com/embed/${vid}?autoplay=1&mute=1&rel=0&modestbranding=1&playsinline=1&loop=1&playlist=${vid}`;
+    if (vid && iframe) iframe.src = `https://www.youtube.com/embed/${vid}?rel=0&modestbranding=1&playsinline=1`;
   }
 
   st('stat1_num',   map.stat1_num);   st('stat1_label', map.stat1_label);
@@ -102,7 +102,7 @@ async function loadSiteText() {
   if (map.homepage_video_url) {
     const vid = extractYTId(map.homepage_video_url);
     const iframe = document.getElementById('homepage-video');
-    if (vid && iframe) iframe.src = `https://www.youtube.com/embed/${vid}?autoplay=1&mute=1&rel=0&modestbranding=1&playsinline=1`;
+    if (vid && iframe) iframe.src = `https://www.youtube.com/embed/${vid}?rel=0&modestbranding=1&playsinline=1`;
   }
 
   st('testi_label',   map.testi_label);
@@ -472,12 +472,12 @@ async function loadCourses() {
     if (heroRow?.value) {
       const vid = extractYouTubeId(heroRow.value);
       const heroIframe = document.getElementById('hero-video');
-      if (vid && heroIframe) heroIframe.src = `https://www.youtube.com/embed/${vid}?autoplay=1&mute=1&rel=0&modestbranding=1&playsinline=1&loop=1&playlist=${vid}`;
+      if (vid && heroIframe) heroIframe.src = `https://www.youtube.com/embed/${vid}?rel=0&modestbranding=1&playsinline=1`;
     }
     if (aboutRow?.value) {
       const vid = extractYouTubeId(aboutRow.value);
       const aboutIframe = document.getElementById('homepage-video');
-      if (vid && aboutIframe) aboutIframe.src = `https://www.youtube.com/embed/${vid}?autoplay=1&mute=1&rel=0&modestbranding=1&playsinline=1`;
+      if (vid && aboutIframe) aboutIframe.src = `https://www.youtube.com/embed/${vid}?rel=0&modestbranding=1&playsinline=1`;
     }
   }
 }
@@ -1567,7 +1567,21 @@ const _pageHashes = {
   'cart': 'cart', 'order-track': 'orders', 'payment': 'payment', 'verify': 'verify'
 };
 
+function _stopHomeVideos() {
+  ['hero-video', 'homepage-video'].forEach(id => {
+    const f = document.getElementById(id);
+    if (f && f.src) { f.dataset.savedSrc = f.src; f.src = ''; }
+  });
+}
+function _restoreHomeVideos() {
+  ['hero-video', 'homepage-video'].forEach(id => {
+    const f = document.getElementById(id);
+    if (f && f.dataset.savedSrc) { f.src = f.dataset.savedSrc; delete f.dataset.savedSrc; }
+  });
+}
+
 function go(page, _skipHistory) {
+  if (page === 'home') _restoreHomeVideos(); else _stopHomeVideos();
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   const el = document.getElementById('page-'+page);
   if (!el) return;
