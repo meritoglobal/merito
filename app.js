@@ -1580,7 +1580,32 @@ function _restoreHomeVideos() {
   });
 }
 
-function go(page, _skipHistory) {
+const _navStack = [];
+
+function goBack() {
+  if (_navStack.length === 0) { go('home', false, true); return; }
+  const prev = _navStack.pop();
+  go(prev, false, true);
+}
+
+function _updateBackBtn(page, noNav) {
+  const btn = document.getElementById('back-btn');
+  if (!btn) return;
+  const noBackPages = ['home'];
+  const floatPages  = ['login', 'register', 'verify', 'course-player'];
+  btn.style.display = noBackPages.includes(page) ? 'none' : 'flex';
+  btn.classList.toggle('back-btn-float', floatPages.includes(page));
+}
+
+function go(page, _skipHistory, _noStack) {
+  if (!_noStack) {
+    const cur = document.querySelector('.page.active');
+    if (cur) {
+      const curId = cur.id.replace('page-', '');
+      if (curId !== page) _navStack.push(curId);
+    }
+  }
+  if (page === 'home') _navStack.length = 0;
   if (page === 'home') _restoreHomeVideos(); else _stopHomeVideos();
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   const el = document.getElementById('page-'+page);
@@ -1591,6 +1616,7 @@ function go(page, _skipHistory) {
   const noNav = ['login', 'register', 'verify'];
   document.getElementById('main-nav-wrap').style.display = noNav.includes(page) ? 'none' : 'block';
   document.getElementById('mob-nav').style.display  = noNav.includes(page) ? 'none' : 'block';
+  _updateBackBtn(page, noNav.includes(page));
   setTimeout(() => { el.querySelectorAll('.reveal').forEach(r => r.classList.add('on')); }, 80);
   if (page === 'profile') loadProfileData();
   if (page === 'order-track') loadOrderHistory();
