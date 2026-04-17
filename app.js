@@ -41,6 +41,14 @@ window.addEventListener('DOMContentLoaded', async () => {
   } catch(e) {}
 
   await Promise.all([loadSiteText(), loadCourses()]);
+
+  // Respect the URL on fresh load / refresh.
+  // hashchange/popstate only fire on *changes* — they never fire on initial load,
+  // so we must read the hash ourselves after data is ready.
+  if (window.location.hash) {
+    handleHashNav();
+    _navStack.length = 0; // this is an entry point, not a forward navigation
+  }
 });
 
 /* ── Ocoya-style scroll-shrink navbar ── */
