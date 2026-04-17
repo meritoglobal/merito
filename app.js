@@ -1050,14 +1050,12 @@ function renderCart() {
   container.innerHTML = activeCart.map(item => `
     <div class="cart-item">
       <div class="cart-thumb">${item.icon}</div>
-      <div class="cart-info">
-        <div class="cart-title">${item.title}</div>
-        <div class="cart-meta" style="font-size:12px;color:var(--text-dim);margin-top:4px;">${item.type === 'book' ? '📚 Book' : '🎓 Course'}</div>
+      <div class="cart-item-info">
+        <div class="cart-item-name">${item.title}</div>
+        <span class="cart-item-badge">${item.type === 'book' ? '📚 Book' : '🎓 Course'}</span>
       </div>
-      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;">
-        <div class="cart-price">৳${item.price.toLocaleString()}</div>
-        <a class="cart-remove" onclick="removeFromCart('${item.cartKey}')" style="cursor:pointer;">Remove</a>
-      </div>
+      <div class="cart-item-price">৳${item.price.toLocaleString()}</div>
+      <button class="cart-item-remove" onclick="removeFromCart('${item.cartKey}')" title="Remove">×</button>
     </div>`).join('');
 
   if (totalEl)    totalEl.textContent    = '৳' + total.toLocaleString();
