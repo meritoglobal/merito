@@ -12,6 +12,7 @@ let currentUser = null;
 let COURSES = [];
 let ALL_CATEGORIES = []; // all categories including admin-added ones with no courses yet
 let ALL_INSTRUCTORS = []; // all instructors loaded from DB
+let _myEnrolledIds = new Set(); // course IDs the logged-in user is enrolled in
 let activeCart = []; // [{courseId, title, price, icon, orderId}]
 let currentCourseId = null;
 let activePaymentMethod = 'bkash';
@@ -37,6 +38,7 @@ window.addEventListener('DOMContentLoaded', async () => {
       currentUser = _stored.user;
       updateNavUI(true);
       loadNotifications();
+      _loadMyEnrollments();
     }
   } catch(e) {}
 
@@ -170,12 +172,14 @@ sb.auth.onAuthStateChange(async (event, session) => {
     upsertProfile(currentUser); // fire-and-forget, don't block
     updateNavUI(true);
     loadNotifications();
+    _loadMyEnrollments();
 
   } else if (event === 'SIGNED_IN') {
     currentUser = session.user;
     await upsertProfile(currentUser);
     updateNavUI(true);
     loadNotifications();
+    _loadMyEnrollments();
     const complete = await checkProfileComplete(currentUser);
     if (!complete) { showProfileSetup(currentUser); return; }
     _redirectAfterLogin();
@@ -187,6 +191,7 @@ sb.auth.onAuthStateChange(async (event, session) => {
   } else if (event === 'SIGNED_OUT') {
     currentUser = null;
     activeCart = [];
+    _myEnrolledIds = new Set();
     updateNavUI(false);
     _clearBell();
     go('home');
@@ -1546,6 +1551,25 @@ function enrolledCourseCard(c) {
 }
 
 /* ══════════════════════════════════════════════
+   LOAD USER ENROLLMENTS (global set for instant checks)
+══════════════════════════════════════════════ */
+async function _loadMyEnrollments() {
+  if (!currentUser) { _myEnrolledIds = new Set(); renderAllCourseGrids(); return; }
+  const { data } = await sb.from('course_enrollments').select('course_id').eq('user_email', currentUser.email);
+  _myEnrolledIds = new Set((data || []).map(r => String(r.course_id)));
+  renderAllCourseGrids(); // refresh cards so enrolled ones show "Continue Learning"
+  // If detail page is open for an enrolled course, update its buttons too
+  if (currentCourseId && _myEnrolledIds.has(String(currentCourseId))) _applyEnrolledStateToDetail(currentCourseId);
+}
+
+function _applyEnrolledStateToDetail(courseId) {
+  const addBtn = document.querySelector('#page-detail .detail-sidebar .btn-hero-primary');
+  const buyBtn = document.querySelector('#page-detail .detail-sidebar .btn-hero-secondary');
+  if (addBtn) { addBtn.textContent = '▶ Start Learning'; addBtn.onclick = () => openCoursePlayer(courseId); }
+  if (buyBtn) buyBtn.style.display = 'none';
+}
+
+/* ══════════════════════════════════════════════
    UPDATE NAV BUTTONS based on login state
 ══════════════════════════════════════════════ */
 function updateNavUI(loggedIn) {
@@ -1564,9 +1588,15 @@ function updateNavUI(loggedIn) {
    COURSE CARD HTML
 ══════════════════════════════════════════════ */
 function courseCard(c) {
-  const badgeHtml = c.badge
-    ? `<div style="position:absolute;top:10px;left:10px;z-index:2;"><span class="badge badge-purple">${c.badge}</span></div>`
-    : '';
+  const isEnrolled = currentUser && _myEnrolledIds.has(String(c.id));
+  const badgeHtml = isEnrolled
+    ? `<div style="position:absolute;top:10px;left:10px;z-index:2;"><span class="badge badge-purple">ENROLLED</span></div>`
+    : c.badge
+      ? `<div style="position:absolute;top:10px;left:10px;z-index:2;"><span class="badge badge-purple">${c.badge}</span></div>`
+      : '';
+  const btnHtml = isEnrolled
+    ? `<button class="btn-enroll" style="background:var(--teal);border-color:var(--teal);" onclick="event.stopPropagation();openCoursePlayer(${c.id})">▶ Continue Learning</button>`
+    : `<button class="btn-enroll" onclick="event.stopPropagation();addToCartAndGo(${c.id})">Enroll Now</button>`;
   return `<div class="course-card" onclick="openCourse(${c.id})">
     <div class="course-thumb">
       <div class="course-thumb-inner">
@@ -1581,10 +1611,8 @@ function courseCard(c) {
         <span>📹 ${c.lessons}+ lessons</span>
         <span class="course-rating">★ ${c.rating}</span>
       </div>
-      <div class="course-price-row">
-        <div><span class="price">৳${c.price.toLocaleString()}</span><span class="price-old">৳${c.oldPrice.toLocaleString()}</span></div>
-      </div>
-      <button class="btn-enroll" onclick="event.stopPropagation();addToCartAndGo(${c.id})">Enroll Now</button>
+      ${isEnrolled ? '' : `<div class="course-price-row"><div><span class="price">৳${c.price.toLocaleString()}</span><span class="price-old">৳${c.oldPrice.toLocaleString()}</span></div></div>`}
+      ${btnHtml}
     </div>
   </div>`;
 }
@@ -1755,24 +1783,15 @@ function openCourse(id) {
       thumbWrap.textContent = c.icon;
     }
 
-    // Wire up Add to Cart & Buy Now buttons — check enrollment first
+    // Wire up Add to Cart & Buy Now buttons
     const addBtn = document.querySelector('#page-detail .detail-sidebar .btn-hero-primary');
     const buyBtn = document.querySelector('#page-detail .detail-sidebar .btn-hero-secondary');
-    if (currentUser) {
-      sb.from('course_enrollments').select('id').eq('user_email', currentUser.email).eq('course_id', c.id).maybeSingle()
-        .then(({ data: enr }) => {
-          if (enr) {
-            // Already enrolled — show Start Learning
-            if (addBtn) { addBtn.textContent = '▶ Start Learning'; addBtn.onclick = () => openCoursePlayer(c.id); }
-            if (buyBtn) buyBtn.style.display = 'none';
-          } else {
-            if (addBtn) addBtn.onclick = () => addToCartAndGo(c.id);
-            if (buyBtn) buyBtn.onclick = () => addToCartAndGo(c.id);
-          }
-        });
-    } else {
-      if (addBtn) addBtn.onclick = () => addToCartAndGo(c.id);
-      if (buyBtn) buyBtn.onclick = () => addToCartAndGo(c.id);
+    // Always reset to default state first (in case a previous course was enrolled)
+    if (addBtn) { addBtn.textContent = 'Add to Cart'; addBtn.style.display = ''; addBtn.onclick = () => addToCartAndGo(c.id); }
+    if (buyBtn) { buyBtn.style.display = ''; buyBtn.onclick = () => addToCartAndGo(c.id); }
+    // Instantly apply enrolled state from cache — no async flicker
+    if (currentUser && _myEnrolledIds.has(String(c.id))) {
+      _applyEnrolledStateToDetail(c.id);
     }
 
     // ── Render Overview: What You'll Learn ──
