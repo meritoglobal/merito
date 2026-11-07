@@ -1,9 +1,15 @@
 /* ══════════════════════════════════════════
-   ADMIN CREDENTIALS  (defined first so login
-   always works even if Supabase fails to load)
+   ADMIN ACCOUNT
+   The password is NOT stored here. Login is checked by Supabase Auth.
+   Only this email is allowed into the admin panel; the database must
+   also enforce this with RLS (see supabase/admin-security.sql).
 ══════════════════════════════════════════ */
 const ADMIN_EMAIL = 'meritoglobalbd@gmail.com';
-const ADMIN_PASS  = 'asdqwe12';
+
+function _isAdminSession(session) {
+  return !!(session && session.user &&
+    (session.user.email || '').toLowerCase() === ADMIN_EMAIL);
+}
 
 /* ══════════════════════════════════════════
    SUPABASE CONFIG
@@ -50,7 +56,7 @@ function _db() { return SUPABASE_SERVICE_KEY ? sbAdmin : sb; }
 async function adminLogout() {
   if (confirm('Are you sure you want to logout?')) {
     await sb.auth.signOut();
-    localStorage.removeItem('meritoAdminLoggedIn');
+    localStorage.removeItem('meritoAdminLoggedIn'); // legacy flag from old login
     document.getElementById('app').style.display = 'none';
     document.getElementById('login-screen').style.display = 'flex';
     document.getElementById('adm-email').value = '';
@@ -69,20 +75,27 @@ window.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  if (localStorage.getItem('meritoAdminLoggedIn') === 'yes') {
-    document.getElementById('login-screen').style.display = 'none';
-    document.getElementById('app').style.display = 'block';
-    loadDashboard();
-    loadOrders();
-    loadCourses();
-    loadUsers();
-    loadCategories();
-    loadInstructors();
-    loadHomepageVideo();
-    loadNotifications();
-    nav('dashboard');
-  }
+  // Old builds kept a plain 'yes' flag here; it is no longer trusted.
+  localStorage.removeItem('meritoAdminLoggedIn');
+
+  // Restore a real Supabase session (survives refresh) instead of a flag.
+  if (!sb) return;
+  sb.auth.getSession().then(({ data }) => {
+    if (_isAdminSession(data && data.session)) {
+      _showAdminApp();
+      nav('dashboard');
+    }
+    // A non-admin (student) session just sees the login screen. We don't
+    // sign it out, because the student site shares the same session.
+  });
 });
+
+function _showAdminApp() {
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  loadDashboard(); loadOrders(); loadCourses(); loadUsers();
+  loadCategories(); loadInstructors(); loadHomepageVideo(); loadNotifications();
+}
 
 async function adminLogin() {
   const email = document.getElementById('adm-email').value.trim();
@@ -91,18 +104,23 @@ async function adminLogin() {
   const btn   = document.querySelector('.login-btn');
   err.style.display = 'none';
 
-  if (email !== ADMIN_EMAIL || pass !== ADMIN_PASS) {
+  if (!sb) {
+    err.textContent = 'Could not connect to the server. Check your internet and reload.';
+    err.style.display = 'block'; return;
+  }
+  if (email.toLowerCase() !== ADMIN_EMAIL) {
+    err.textContent = 'Wrong email or password.';
     err.style.display = 'block'; return;
   }
 
   btn.textContent = 'Signing in…'; btn.disabled = true;
-  // Authenticate with Supabase so RLS policies allow full admin access
-  const { error } = await sb.auth.signInWithPassword({ email, password: pass });
+  const { data, error } = await sb.auth.signInWithPassword({ email, password: pass });
   btn.textContent = 'Sign In'; btn.disabled = false;
 
-  if (error) {
-    // Supabase auth failed — still allow admin via localStorage only (fallback)
-    console.warn('Supabase auth failed, using local auth:', error.message);
+  if (error || !_isAdminSession(data && data.session)) {
+    if (data && data.session) await sb.auth.signOut();
+    err.textContent = 'Wrong email or password.';
+    err.style.display = 'block'; return;
   }
 
   // Save service key to localStorage if provided; reinit sbAdmin
@@ -119,11 +137,7 @@ async function adminLogin() {
     } catch(e) { console.warn('sbAdmin init failed:', e); }
   }
 
-  localStorage.setItem('meritoAdminLoggedIn', 'yes');
-  document.getElementById('login-screen').style.display = 'none';
-  document.getElementById('app').style.display = 'block';
-  loadDashboard(); loadOrders(); loadCourses(); loadUsers();
-  loadCategories(); loadInstructors(); loadHomepageVideo(); loadNotifications();
+  _showAdminApp();
 }
 
 // Allow Enter key on login
